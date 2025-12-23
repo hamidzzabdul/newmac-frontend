@@ -15,28 +15,28 @@ function NavBar() {
       <div className="w-full h-14 bg-red-500 flex items-center justify-center p-3">
         <div className="flex items-center justify-center gap-3">
           <h1 className="text-white font-semibold capitalize text-lg">
-            Free delivery for order above 5,000 ksh
+            Free delivery for order above ksh 5,000
           </h1>
-          {/* <h1 className="text-white font-semibold capitalize text-lg">
-          Follow us on
+          <h1 className="text-white font-semibold capitalize text-lg">
+            Follow:
           </h1>
           <div className="flex item-center gap-2">
-          <Link href="" className="cursor-pointer">
-          <FaSquareFacebook className="text-white" size={18} />
-          </Link>
-          <Link href="" className="cursor-pointer">
-          <FaTiktok className="text-white" size={17} />
-          </Link>
-          <Link href="" className="cursor-pointer">
-          <FaInstagram className="text-white" size={17} />
-          </Link>
-          </div> */}
+            <Link href="" className="cursor-pointer">
+              <FaSquareFacebook className="text-white" size={18} />
+            </Link>
+            <Link href="" className="cursor-pointer">
+              <FaTiktok className="text-white" size={17} />
+            </Link>
+            <Link href="" className="cursor-pointer">
+              <FaInstagram className="text-white" size={17} />
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* primary navbar */}
       <div className="w-full bg-white shadow-md">
-        <div className="lg:w-[80%] max-w-350 mx-auto flex items-center justify-between p-4">
+        <div className="lg:w-[90%] max-w-350 mx-auto flex items-center justify-between p-4">
           <div>
             <ul className="hidden md:flex item-center gap-4 text-black">
               <Link href={"/about-us"}>

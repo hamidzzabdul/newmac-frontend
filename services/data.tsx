@@ -1,0 +1,58 @@
+export const dummyProducts = [
+  {
+    id: "1",
+    name: "Beef Steak",
+    category: "beef",
+    pricePerKg: 750,
+    image: "/images/products/beef-steak.jpg",
+  },
+  {
+    id: "2",
+    name: "Beef Mince",
+    category: "beef",
+    pricePerKg: 650,
+    image: "/images/products/beef-mince.jpg",
+  },
+  {
+    id: "3",
+    name: "Beef Ribs",
+    category: "beef",
+    pricePerKg: 700,
+    image: "/images/products/beef-ribs.jpg",
+  },
+  {
+    id: "4",
+    name: "Goat Meat (Choma Cut)",
+    category: "goat",
+    pricePerKg: 900,
+    image: "/images/products/goat-choma.jpg",
+  },
+  {
+    id: "5",
+    name: "Goat Meat (Stew Cut)",
+    category: "goat",
+    pricePerKg: 850,
+    image: "/images/products/goat-stew.jpg",
+  },
+  {
+    id: "6",
+    name: "Lamb Chops",
+    category: "lamb",
+    pricePerKg: 1_100,
+    image: "/images/products/lamb-chops.jpg",
+  },
+  {
+    id: "7",
+    name: "Lamb Shoulder",
+    category: "lamb",
+    pricePerKg: 1_000,
+    image: "/images/products/lamb-shoulder.jpg",
+  },
+  {
+    id: "8",
+    name: "Mixed Meat Pack",
+    category: "mixed",
+    pricePerKg: 800,
+    image: "/images/products/mixed-pack.jpg",
+  },
+];
