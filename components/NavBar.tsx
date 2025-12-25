@@ -80,10 +80,12 @@ function NavBar() {
               size={22}
             />
             <div className="relative hover:scale-120 transform transition duration-300">
-              <IoBagOutline
-                className="cursor-pointer hidden md:block "
-                size={20}
-              />
+              <Link href={"/cart"}>
+                <IoBagOutline
+                  className="cursor-pointer hidden md:block "
+                  size={20}
+                />
+              </Link>
 
               <div className="w-4 h-4 absolute -top-1 -right-2.5 bg-red-500 flex item-center justify-center rounded-full  text-white ">
                 <span className="text-[.55rem] flex items-center justify-center">
