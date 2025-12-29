@@ -1,6 +1,10 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { addToCart } from "@/app/store/features/CartSlice";
+import toast from "react-hot-toast";
 
 type Product = {
   id: string;
@@ -13,12 +17,26 @@ type Product = {
 
 const ProductItem = ({ product }: { product: Product }) => {
   const inStock = product.inStock !== false;
+  const dispatch = useDispatch();
+  const handleAddToCart = () => {
+    dispatch(
+      addToCart({
+        id: product.id,
+        name: product.name,
+        pricePerKg: product.pricePerKg,
+        quantityKg: 1,
+        image: product.image,
+        category: product.category,
+      })
+    );
+    toast.success(`${product.name} added to cart!`);
+  };
 
   return (
     <div className="w-full group">
       <div className="w-full overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
         {/* Image */}
-        <Link href={`/products/${product.id}`}>
+        <Link href={`/shop/${product.id}`}>
           <div className="relative w-full aspect-4/3 bg-gray-50 overflow-hidden cursor-pointer">
             <Image
               src={product.image || "/placeholder-meat.jpg"}
@@ -47,7 +65,7 @@ const ProductItem = ({ product }: { product: Product }) => {
 
         {/* Content */}
         <div className="p-3">
-          <Link href={`/products/${product.id}`}>
+          <Link href={`/shop/${product.id}`}>
             <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight hover:text-red-600 transition-colors cursor-pointer">
               {product.name}
             </h3>
@@ -62,7 +80,8 @@ const ProductItem = ({ product }: { product: Product }) => {
 
           <button
             disabled={!inStock}
-            className={`w-full mt-2 py-1.5 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2
+            onClick={handleAddToCart}
+            className={`w-full mt-2 py-1.5 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer
               ${
                 inStock
                   ? "bg-red-600 hover:bg-red-700 text-white active:scale-95"

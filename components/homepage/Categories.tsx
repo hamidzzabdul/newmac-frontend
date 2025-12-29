@@ -34,14 +34,6 @@ const categories = [
     href: "/shop?category=chicken",
     color: "from-amber-600 to-amber-800",
   },
-  {
-    id: 5,
-    name: "Camel",
-    description: "Exotic camel meat cuts",
-    image: "/categories/camel.jpg",
-    href: "/shop?category=camel",
-    color: "from-yellow-700 to-yellow-900",
-  },
 ];
 
 const Categories = () => {

@@ -1,17 +1,38 @@
 import { Plus, Minus, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { useDispatch } from "react-redux";
+import { removeFromCart, updateQuantity } from "../store/features/CartSlice";
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   weight: string;
-  price: number;
-  quantity: number;
+  pricePerKg: number;
+  quantityKg: number;
   image: string;
 };
 
 function CartItem({ product }: { product: Product }) {
+  const dispatch = useDispatch();
+
+  const handleCartIncrease = () => {
+    dispatch(
+      updateQuantity({ id: product.id, quantity: product.quantityKg + 1 })
+    );
+  };
+
+  const handleCartDecrease = () => {
+    if (product.quantityKg > 1) {
+      dispatch(
+        updateQuantity({ id: product.id, quantity: product.quantityKg - 1 })
+      );
+    }
+  };
+
+  const handleRemove = () => {
+    dispatch(removeFromCart(product.id));
+  };
   return (
     <div
       key={product.id}
@@ -42,19 +63,25 @@ function CartItem({ product }: { product: Product }) {
             <span>{product.weight}</span>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            KSh {product.price.toLocaleString()} each
+            KSh {product.pricePerKg.toLocaleString()} each
           </p>
         </div>
 
         {/* Quantity Controls - Flex */}
         <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1">
-          <button className="w-9 h-9 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-red-300 transition">
+          <button
+            onClick={handleCartDecrease}
+            className="w-9 h-9 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-red-300 transition"
+          >
             <Minus size={16} className="text-gray-600" />
           </button>
           <span className="w-12 text-center font-bold text-gray-800">
-            {product.quantity}
+            {product.quantityKg}
           </span>
-          <button className="w-9 h-9 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-red-300 transition">
+          <button
+            onClick={handleCartIncrease}
+            className="w-9 h-9 flex items-center justify-center bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-red-300 transition"
+          >
             <Plus size={16} className="text-gray-600" />
           </button>
         </div>
@@ -62,9 +89,12 @@ function CartItem({ product }: { product: Product }) {
         {/* Price & Remove - Flex */}
         <div className="flex items-center justify-between md:flex-col md:items-end gap-3">
           <span className="text-xl font-bold text-red-600">
-            KSh {(product.price * product.quantity).toLocaleString()}
+            KSh {(product.pricePerKg * product.quantityKg).toLocaleString()}
           </span>
-          <button className="w-10 h-10 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition">
+          <button
+            className="w-10 h-10 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+            onClick={handleRemove}
+          >
             <Trash2 size={20} />
           </button>
         </div>

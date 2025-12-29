@@ -1,39 +1,22 @@
-import React from "react";
+"use client";
 import { ArrowLeft } from "lucide-react";
 import CartItem from "@/app/cart/CartItem";
+import { useSelector } from "react-redux";
+import { RootState } from "../store";
 
 // Dummy cart data
-const dummyCartItems = [
-  {
-    id: 1,
-    name: "Premium Beef Steak",
-    category: "Beef",
-    price: 800,
-    quantity: 2,
-    weight: "500g",
-    image:
-      "https://images.unsplash.com/photo-1588168333986-5078d3ae3976?w=400&h=400&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Chicken Breast Fillet",
-    category: "Chicken",
-    price: 450,
-    quantity: 1,
-    weight: "1kg",
-    image:
-      "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
-  },
-];
 
 // Cart Page Component with Flex Design
 const CartLayout = () => {
-  const subtotal = dummyCartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
+  const cartItems = useSelector((state: RootState) => state.cart.items);
+
+  const subtotal = cartItems.reduce(
+    (total: number, item) => total + item.pricePerKg * item.quantityKg,
     0
   );
   const deliveryFee = subtotal >= 5000 ? 0 : 200;
   const total = subtotal + deliveryFee;
+  console.log(cartItems);
 
   return (
     <div className="w-[90%] m-auto mt-10 min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
@@ -57,7 +40,7 @@ const CartLayout = () => {
             {/* Cart Header Card */}
             <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">
-                Cart Items ({dummyCartItems.length})
+                Cart Items ({cartItems.length})
               </h2>
               <button className="text-sm font-medium text-red-600 hover:text-red-700 px-4 py-2 border border-red-200 rounded-lg hover:bg-red-50 transition">
                 Clear Cart
@@ -66,7 +49,7 @@ const CartLayout = () => {
 
             {/* Cart Items - Flex Column */}
             <div className="flex flex-col gap-3">
-              {dummyCartItems.map((item) => (
+              {cartItems.map((item) => (
                 <div className="" key={item.id}>
                   <CartItem product={item} />
                 </div>
