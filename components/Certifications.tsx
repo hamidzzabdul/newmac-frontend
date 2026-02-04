@@ -1,12 +1,13 @@
 import Image from "next/image";
 import { Shield, Award, CheckCircle2 } from "lucide-react";
-
+import image1 from "../public/business-permit.png";
+import image2 from "../public/incorporation.png";
 const certifications = [
   {
     id: 1,
     name: "Halal Certification",
     description: "Certified by Kenya Halal Board",
-    img: "/certifications/halal-cert.jpg",
+    img: image1,
     issuedBy: "Kenya Halal Board",
     validUntil: "2026",
   },
@@ -14,7 +15,7 @@ const certifications = [
     id: 2,
     name: "Food Safety License",
     description: "Kenya Bureau of Standards Approved",
-    img: "/certifications/kebs-cert.jpg",
+    img: image2,
     issuedBy: "KEBS",
     validUntil: "2026",
   },
@@ -22,7 +23,7 @@ const certifications = [
     id: 3,
     name: "Business License",
     description: "Nairobi County Government",
-    img: "/certifications/business-license.jpg",
+    img: image1,
     issuedBy: "County Government",
     validUntil: "2025",
   },
@@ -30,7 +31,7 @@ const certifications = [
     id: 4,
     name: "Health Inspection",
     description: "Public Health Department Certified",
-    img: "/certifications/health-cert.jpg",
+    img: image2,
     issuedBy: "Ministry of Health",
     validUntil: "2026",
   },
@@ -62,7 +63,7 @@ const Certifications = () => {
               className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-2 border-gray-100 overflow-hidden"
             >
               {/* Certificate Image */}
-              <div className="relative h-64 bg-linear-to-br from-gray-100 to-gray-200 overflow-hidden">
+              <div className="relative h-100 bg-linear-to-br from-gray-100 to-gray-200 overflow-hidden">
                 <Image
                   src={cert.img}
                   alt={cert.name}

@@ -1,12 +1,20 @@
 import { Search } from "lucide-react";
 
-const FiltersSidebar = ({
+interface FiltersSidebarProps {
+  categories: string[];
+  selectedCategory: string;
+  setSelectedCategory: (category: string) => void;
+  showInStock: boolean;
+  setShowInStock: (inStock: boolean) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  clearFilters: () => void;
+}
+
+const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
   categories,
-  priceRanges,
   selectedCategory,
   setSelectedCategory,
-  selectedPriceRange,
-  setSelectedPriceRange,
   showInStock,
   setShowInStock,
   searchQuery,
@@ -14,7 +22,7 @@ const FiltersSidebar = ({
   clearFilters,
 }) => {
   return (
-    <aside className="hidden lg:block w-80 flex-shrink-0">
+    <aside className="hidden lg:block w-60 shrink-0">
       <div className="bg-white rounded-xl shadow-md p-6 sticky top-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">Filters</h2>
@@ -63,28 +71,6 @@ const FiltersSidebar = ({
                 }`}
               >
                 {category}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Price Range */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-3">
-            Price Range
-          </label>
-          <div className="space-y-2">
-            {priceRanges.map((range, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedPriceRange(index)}
-                className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  selectedPriceRange === index
-                    ? "bg-red-600 text-white font-semibold"
-                    : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {range.label}
               </button>
             ))}
           </div>

@@ -9,8 +9,8 @@ const ProductsHeader = ({
 }) => (
   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <div>
-      <h2 className="text-2xl font-bold text-gray-900">
-        {filteredProducts.length} Products
+      <h2 className="text-base font-bold text-gray-900">
+        Showing {filteredProducts.length} Products
       </h2>
       {(searchQuery || selectedCategory !== "All") && (
         <p className="text-gray-600 text-sm mt-1">
@@ -25,7 +25,7 @@ const ProductsHeader = ({
       <select
         value={sortBy}
         onChange={(e) => setSortBy(e.target.value)}
-        className="appearance-none px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white font-semibold cursor-pointer"
+        className="appearance-none px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white font-semibold cursor-pointer text-xs"
       >
         <option value="default">Sort By: Default</option>
         <option value="price-low">Price: Low to High</option>

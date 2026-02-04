@@ -1,46 +1,63 @@
-import { dummyProducts } from "@/services/data";
+"use client";
 import ProductItem from "./ProductItem";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+// import { ArrowRight } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import type { Product as ProductType } from "@/types/product";
 
-function Product() {
+// Import Swiper styles
+import "swiper/css";
+
+type ProductProps = {
+  category: {
+    id: number;
+    name: string;
+  };
+  products: ProductType[];
+};
+
+function Product({ category, products }: ProductProps) {
+  const filterdProducts = products.filter(
+    (product) => product.category.toLowerCase() === category.name.toLowerCase()
+  );
+
   return (
-    <section className="py-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <span className="inline-block px-4 py-2 bg-red-50 text-red-600 font-semibold text-sm rounded-full mb-4">
-            FRESH SELECTION
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Shop Our <span className="text-red-600">Premium Meats</span>
-          </h2>
-          <p className="text-gray-600 text-sm max-w-2xl w-2/4 mx-auto">
-            Explore our fresh variety of premium quality meats, sourced from
-            trusted suppliers and delivered straight to your door
-          </p>
-        </div>
-
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
-          {dummyProducts.map((item) => (
-            <ProductItem key={item.id} product={item} />
-          ))}
-        </div>
-
-        {/* View All Button */}
-        <div className="text-center mt-12">
-          <Link href="/shop">
-            <button className="group inline-flex items-center gap-3 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-              View All Products
-              <ArrowRight
-                size={20}
-                className="group-hover:translate-x-1 transition-transform"
-              />
-            </button>
-          </Link>
-        </div>
+    <section className="py-6 w-full">
+      <div className="w-full h-10 px-3 py-2 bg-red-500 flex items-center justify-between">
+        <p className="text-base font-semibold text-white">{category.name}</p>
+        <Link href={"/shop"} className="text-sm text-white cursor-pointer">
+          See All
+        </Link>
       </div>
+      <Swiper
+        spaceBetween={20}
+        slidesPerView={1}
+        breakpoints={{
+          640: {
+            slidesPerView: 2,
+            spaceBetween: 15,
+          },
+          768: {
+            slidesPerView: 3,
+            spaceBetween: 20,
+          },
+          1024: {
+            slidesPerView: 4,
+            spaceBetween: 20,
+          },
+          1280: {
+            slidesPerView: 5,
+            spaceBetween: 20,
+          },
+        }}
+        className="w-full mt-3"
+      >
+        {filterdProducts.map((product) => (
+          <SwiperSlide key={product._id}>
+            <ProductItem product={product} />
+          </SwiperSlide>
+        ))}
+      </Swiper>
     </section>
   );
 }

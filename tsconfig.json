@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "app/(admin)/dashboard/products/edit", "app/(admin)/components/DeleteConfirmationModal"  ],
   "exclude": ["node_modules"]
 }
