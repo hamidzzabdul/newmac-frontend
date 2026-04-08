@@ -1,7 +1,13 @@
-"use server";
-import { auth } from "@clerk/nextjs/server";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem("auth_token");
+  } catch {
+    return null;
+  }
+}
 
 // Types
 interface Product {
@@ -28,14 +34,23 @@ export interface GetProductsResponse {
 
 // API Functions
 export const createProduct = async (formData: FormData): Promise<Product> => {
+  const headers: HeadersInit = {};
+
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  // Note: No Content-Type here — let browser set it for FormData
+
   const response = await fetch(`${API_BASE_URL}/products`, {
     method: "POST",
+    headers,
     body: formData,
-    // DO NOT set Content-Type header - let the browser handle it automatically
   });
 
   if (!response.ok) {
     const error = await response.json();
+    console.log(error);
     throw new Error(error.message || "Failed to create product");
   }
 
@@ -43,24 +58,28 @@ export const createProduct = async (formData: FormData): Promise<Product> => {
 };
 
 export const getAllProducts = async (): Promise<GetProductsResponse> => {
-  const {getToken} = await auth()
-  const token= await getToken()
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  }
-  if(token) {
-    headers.Authorization = `Bearer ${token}`
+  let token: string | null = null;
+
+  // ✅ Only access localStorage in browser
+  if (typeof window !== "undefined") {
+    token = localStorage.getItem("auth_token");
   }
 
-  const res = await fetch(`${API_BASE_URL}/products`, 
-    {
-      headers,
-  }); // your API endpoint
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/products`, {
+    headers,
+  });
 
   if (!res.ok) throw new Error("Failed to fetch products");
 
-  const data: GetProductsResponse = await res.json();
-  return data;
+  return res.json();
 };
 
 export const getProductById = async (id: string): Promise<Product> => {
@@ -79,10 +98,17 @@ export const updateProduct = async ({
   id: string;
   formData: FormData;
 }): Promise<Product> => {
+  const headers: HeadersInit = {};
+
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/products/${id}`, {
     method: "PATCH",
+    headers,
     body: formData,
-    // DO NOT set Content-Type header
   });
 
   if (!response.ok) {
@@ -93,27 +119,36 @@ export const updateProduct = async ({
   return response.json();
 };
 
-export const updateProductInventory =async({id, data}:{id:string;  data: {
-  name: string;
-  sku: string;
-  category: string;
-  stockkg: number;
-  pricePerKg: number;
-}}) => {
+export const updateProductInventory = async ({
+  id,
+  data,
+}: {
+  id: string;
+  data: {
+    name: string;
+    sku: string;
+    category: string;
+    stockkg: number;
+    pricePerKg: number;
+  };
+}) => {
+  const token = getAuthToken();
+
   const response = await fetch(`${API_BASE_URL}/products/inventory/${id}`, {
     method: "PATCH",
-    headers:{
-      "Content-Type": "application/json"
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body:JSON.stringify(data)
-  }) 
+    body: JSON.stringify(data),
+  });
 
-  if(!response.ok){
-    const error = await response.json()
-    throw new Error(error.message || "Failed to update Inventory")
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update Inventory");
   }
-  return response.json()
-}
+  return response.json();
+};
 
 export const deleteProduct = async (id: string): Promise<Product> => {
   const response = await fetch(`${API_BASE_URL}/products/${id}`, {

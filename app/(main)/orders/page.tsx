@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Package,
   Truck,
@@ -10,81 +10,85 @@ import {
   Eye,
   Download,
   Search,
+  RefreshCw,
+  BadgeCheck,
 } from "lucide-react";
+import { getMyOrders } from "@/lib/api/orders"; // adjust path as needed
 
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: string;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  items: {
-    name: string;
-    quantity: number;
-    price: number;
-    image?: string;
-  }[];
-  total: number;
-  paymentMethod: string;
-  deliveryAddress: string;
-  estimatedDelivery?: string;
+interface OrderItem {
+  product: string;
+  name: string;
+  quantity: number;
+  price: number;
 }
 
-// Sample orders data
-const sampleOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2024-001",
-    date: "2024-02-01",
-    status: "delivered",
-    items: [
-      { name: "Premium Beef Ribs", quantity: 2, price: 1200 },
-      { name: "Chicken Breast", quantity: 1, price: 800 },
-    ],
-    total: 2000,
-    paymentMethod: "M-Pesa",
-    deliveryAddress: "123 Main St, Nairobi",
-    estimatedDelivery: "2024-02-03",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2024-002",
-    date: "2024-02-02",
-    status: "shipped",
-    items: [{ name: "Goat Meat", quantity: 3, price: 1500 }],
-    total: 1500,
-    paymentMethod: "M-Pesa",
-    deliveryAddress: "456 Oak Ave, Nairobi",
-    estimatedDelivery: "2024-02-05",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2024-003",
-    date: "2024-02-03",
-    status: "processing",
-    items: [
-      { name: "Lamb Chops", quantity: 2, price: 1800 },
-      { name: "Beef Steak", quantity: 1, price: 1200 },
-    ],
-    total: 3000,
-    paymentMethod: "Card",
-    deliveryAddress: "789 Pine Rd, Nairobi",
-    estimatedDelivery: "2024-02-06",
-  },
-];
+interface Order {
+  _id: string;
+  orderNumber: string;
+  createdAt: string;
+  orderStatus:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+  items: OrderItem[];
+  total: number;
+  subtotal: number;
+  shippingFee: number;
+  payment: {
+    method: "mpesa" | "card" | "cod";
+    status: "pending" | "paid" | "failed" | "refunded";
+    mpesaReceiptNumber?: string;
+  };
+  shippingAddress: {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    deliveryNotes?: string;
+    country?: string;
+  };
+}
 
 const MyOrders = () => {
-  const [orders] = useState<Order[]>(sampleOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const getStatusConfig = (status: Order["status"]) => {
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getMyOrders();
+      setOrders(res.data.orders);
+    } catch (err: any) {
+      setError(err.message || "Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const getStatusConfig = (status: Order["orderStatus"]) => {
     const configs = {
       pending: {
         label: "Pending",
         color: "bg-yellow-100 text-yellow-800 border-yellow-200",
         icon: Clock,
         dotColor: "bg-yellow-500",
+      },
+      confirmed: {
+        label: "Confirmed",
+        color: "bg-teal-100 text-teal-800 border-teal-200",
+        icon: BadgeCheck,
+        dotColor: "bg-teal-500",
       },
       processing: {
         label: "Processing",
@@ -114,16 +118,59 @@ const MyOrders = () => {
     return configs[status];
   };
 
+  const formatPaymentMethod = (method: Order["payment"]["method"]) => {
+    return { mpesa: "M-Pesa", card: "Card", cod: "Cash on Delivery" }[method];
+  };
+
+  const formatAddress = (addr: Order["shippingAddress"]) => {
+    return [addr.street, addr.city, addr.postalCode, addr.country]
+      .filter(Boolean)
+      .join(", ");
+  };
+
   const filteredOrders = orders.filter((order) => {
     const matchesStatus =
-      filterStatus === "all" || order.status === filterStatus;
+      filterStatus === "all" || order.orderStatus === filterStatus;
     const matchesSearch =
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.items.some((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     return matchesStatus && matchesSearch;
   });
+
+  // ── Loading State ──────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-10 h-10 text-gray-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading your orders...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error State ────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center bg-white rounded-2xl p-10 shadow-sm border border-gray-200">
+          <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            Failed to load orders
+          </h3>
+          <p className="text-gray-500 mb-6">{error}</p>
+          <button
+            onClick={fetchOrders}
+            className="px-6 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -154,6 +201,7 @@ const MyOrders = () => {
               {[
                 "all",
                 "pending",
+                "confirmed",
                 "processing",
                 "shipped",
                 "delivered",
@@ -184,19 +232,25 @@ const MyOrders = () => {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {orders.filter((o) => o.status === "processing").length}
+                {
+                  orders.filter(
+                    (o) =>
+                      o.orderStatus === "processing" ||
+                      o.orderStatus === "confirmed",
+                  ).length
+                }
               </div>
               <div className="text-sm text-gray-600">Processing</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {orders.filter((o) => o.status === "shipped").length}
+                {orders.filter((o) => o.orderStatus === "shipped").length}
               </div>
               <div className="text-sm text-gray-600">Shipped</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {orders.filter((o) => o.status === "delivered").length}
+                {orders.filter((o) => o.orderStatus === "delivered").length}
               </div>
               <div className="text-sm text-gray-600">Delivered</div>
             </div>
@@ -219,12 +273,11 @@ const MyOrders = () => {
             </div>
           ) : (
             filteredOrders.map((order) => {
-              const statusConfig = getStatusConfig(order.status);
-              const StatusIcon = statusConfig.icon;
+              const statusConfig = getStatusConfig(order.orderStatus);
 
               return (
                 <div
-                  key={order.id}
+                  key={order._id}
                   className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center gap-6">
@@ -247,7 +300,7 @@ const MyOrders = () => {
                           </div>
                           <p className="text-sm text-gray-600">
                             Placed on{" "}
-                            {new Date(order.date).toLocaleDateString()}
+                            {new Date(order.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
@@ -280,21 +333,22 @@ const MyOrders = () => {
                         )}
                       </div>
 
-                      {/* Delivery Info */}
-                      {order.estimatedDelivery &&
-                        order.status !== "delivered" && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
-                            <Truck className="w-4 h-4 text-blue-600" />
-                            <span>
-                              Estimated delivery:{" "}
-                              <span className="font-semibold text-blue-600">
-                                {new Date(
-                                  order.estimatedDelivery
-                                ).toLocaleDateString()}
-                              </span>
-                            </span>
-                          </div>
-                        )}
+                      {/* Payment status pill */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                            order.payment.status === "paid"
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : order.payment.status === "failed"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                          }`}
+                        >
+                          Payment:{" "}
+                          {order.payment.status.charAt(0).toUpperCase() +
+                            order.payment.status.slice(1)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Right: Total & Actions */}
@@ -305,7 +359,7 @@ const MyOrders = () => {
                           KSh {order.total.toLocaleString()}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          via {order.paymentMethod}
+                          via {formatPaymentMethod(order.payment.method)}
                         </div>
                       </div>
 
@@ -360,16 +414,14 @@ const MyOrders = () => {
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Order Status</div>
                   <div className="font-semibold text-gray-900">
-                    {getStatusConfig(selectedOrder.status).label}
+                    {getStatusConfig(selectedOrder.orderStatus).label}
                   </div>
                 </div>
-                <div
-                  className={`px-4 py-2 rounded-full font-semibold ${
-                    getStatusConfig(selectedOrder.status).color
-                  }`}
+                <span
+                  className={`px-4 py-2 rounded-full font-semibold text-sm border ${getStatusConfig(selectedOrder.orderStatus).color}`}
                 >
-                  {getStatusConfig(selectedOrder.status).label}
-                </div>
+                  {getStatusConfig(selectedOrder.orderStatus).label}
+                </span>
               </div>
 
               {/* Items */}
@@ -415,17 +467,15 @@ const MyOrders = () => {
                 <div className="p-4 bg-gray-50 rounded-xl space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Address:</span>
-                    <span className="font-semibold text-gray-900">
-                      {selectedOrder.deliveryAddress}
+                    <span className="font-semibold text-gray-900 text-right max-w-xs">
+                      {formatAddress(selectedOrder.shippingAddress)}
                     </span>
                   </div>
-                  {selectedOrder.estimatedDelivery && (
+                  {selectedOrder.shippingAddress.deliveryNotes && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Estimated Delivery:</span>
-                      <span className="font-semibold text-gray-900">
-                        {new Date(
-                          selectedOrder.estimatedDelivery
-                        ).toLocaleDateString()}
+                      <span className="text-gray-600">Notes:</span>
+                      <span className="font-semibold text-gray-900 text-right max-w-xs">
+                        {selectedOrder.shippingAddress.deliveryNotes}
                       </span>
                     </div>
                   )}
@@ -440,11 +490,21 @@ const MyOrders = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>KSh {selectedOrder.total.toLocaleString()}</span>
+                    <span>
+                      KSh{" "}
+                      {selectedOrder.subtotal?.toLocaleString() ??
+                        selectedOrder.total.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery Fee</span>
-                    <span className="text-green-600 font-semibold">FREE</span>
+                    {selectedOrder.shippingFee === 0 ? (
+                      <span className="text-green-600 font-semibold">FREE</span>
+                    ) : (
+                      <span>
+                        KSh {selectedOrder.shippingFee.toLocaleString()}
+                      </span>
+                    )}
                   </div>
                   <div className="pt-3 border-t flex justify-between">
                     <span className="font-bold text-gray-900 text-lg">
@@ -457,9 +517,32 @@ const MyOrders = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Payment Method</span>
                     <span className="font-semibold text-gray-900">
-                      {selectedOrder.paymentMethod}
+                      {formatPaymentMethod(selectedOrder.payment.method)}
                     </span>
                   </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Payment Status</span>
+                    <span
+                      className={`font-semibold ${
+                        selectedOrder.payment.status === "paid"
+                          ? "text-green-600"
+                          : selectedOrder.payment.status === "failed"
+                            ? "text-red-600"
+                            : "text-yellow-600"
+                      }`}
+                    >
+                      {selectedOrder.payment.status.charAt(0).toUpperCase() +
+                        selectedOrder.payment.status.slice(1)}
+                    </span>
+                  </div>
+                  {selectedOrder.payment.mpesaReceiptNumber && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">M-Pesa Receipt</span>
+                      <span className="font-mono font-semibold text-gray-900">
+                        {selectedOrder.payment.mpesaReceiptNumber}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

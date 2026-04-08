@@ -1,13 +1,13 @@
 import Image from "next/image";
 import { Shield, Award, CheckCircle2 } from "lucide-react";
-import image1 from "../public/business-permit.png";
-import image2 from "../public/incorporation.png";
+// import image1 from "../public/business-permit.png";
+// import image2 from "../public/incorporation.png";
 const certifications = [
   {
     id: 1,
     name: "Halal Certification",
     description: "Certified by Kenya Halal Board",
-    img: image1,
+    img: "",
     issuedBy: "Kenya Halal Board",
     validUntil: "2026",
   },
@@ -15,7 +15,7 @@ const certifications = [
     id: 2,
     name: "Food Safety License",
     description: "Kenya Bureau of Standards Approved",
-    img: image2,
+    img: "",
     issuedBy: "KEBS",
     validUntil: "2026",
   },
@@ -23,7 +23,7 @@ const certifications = [
     id: 3,
     name: "Business License",
     description: "Nairobi County Government",
-    img: image1,
+    img: "",
     issuedBy: "County Government",
     validUntil: "2025",
   },
@@ -31,7 +31,7 @@ const certifications = [
     id: 4,
     name: "Health Inspection",
     description: "Public Health Department Certified",
-    img: image2,
+    img: "",
     issuedBy: "Ministry of Health",
     validUntil: "2026",
   },
@@ -153,7 +153,7 @@ const Certifications = () => {
             about our certifications and quality standards.
           </p>
           <a
-            href="mailto:info@newmac.co.ke"
+            href="mailto:info@NewMark.co.ke"
             className="inline-block px-8 py-4 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             Contact Us for More Information

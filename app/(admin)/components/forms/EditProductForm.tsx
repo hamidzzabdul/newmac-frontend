@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createProductSchema,
   CreateProductInput,
+  UpdateProductInput,
   updateProductSchema,
 } from "@/types/product.schema";
 import { useUpdateProduct } from "@/hooks/useMeatProducts";
@@ -33,7 +34,7 @@ function EditProductForm({ product }: EditProductFormProps) {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CreateProductInput>({
+  } = useForm<UpdateProductInput>({
     resolver: zodResolver(updateProductSchema),
     defaultValues: {
       name: product.name,
@@ -119,7 +120,7 @@ function EditProductForm({ product }: EditProductFormProps) {
           toast.error(err?.message || "Something went wrong");
           setIsSubmitting(false);
         },
-      }
+      },
     );
   };
 
@@ -352,10 +353,9 @@ function EditProductForm({ product }: EditProductFormProps) {
               {...register("category")}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
             >
-              <option value="" defaultChecked>
-                Select category
+              <option value="beef" defaultChecked>
+                Beef
               </option>
-              <option value="beef">Beef</option>
               <option value="goat">Goat</option>
               <option value="lamb">Lamb</option>
               <option value="chicken">Chicken</option>

@@ -1,34 +1,46 @@
 "use client";
-import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import CartItem from "@/app/(main)/cart/CartItem";
-import CheckoutPage from "@/components/shop/CheckoutPage"; // or GlassCheckout
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/index";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/UseAuth";
+import { useState } from "react";
+import AuthModal from "@/components/AuthModal";
 
 const CartLayout = () => {
-  const [showCheckout, setShowCheckout] = useState(false);
   const cartItems = useSelector((state: RootState) => state.cart.items);
+  const { isSignedIn, loading, login } = useAuth(); // 👈
+  const router = useRouter();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const total = cartItems.reduce(
     (total: number, item) => total + item.pricePerKg * item.quantityKg,
-    0
+    0,
   );
 
-  // If checkout is active, show checkout page
-  if (showCheckout) {
-    return (
-      <CheckoutPage
-        cartItems={cartItems}
-        total={total}
-        onBack={() => setShowCheckout(false)}
-      />
-    );
-  }
-
-  // Otherwise show cart
+  const handleCheckout = () => {
+    if (loading) return; // wait for auth to resolve
+    if (isSignedIn) {
+      router.push("/checkout");
+    } else {
+      setAuthModalOpen(true);
+    }
+  };
   return (
     <div className="w-[90%] m-auto mt-10 min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultTab="login"
+        onLoginSuccess={(userData) => {
+          login(userData);
+          setAuthModalOpen(false);
+          router.push("/checkout"); // 👈 proceed after login
+        }}
+      />
+
       {/* Header */}
       <div className="bg-white border-b border-b-gray-300 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -94,10 +106,11 @@ const CartLayout = () => {
 
               {/* Checkout Button - UPDATED */}
               <button
-                onClick={() => setShowCheckout(true)}
-                className="w-full bg-red-600 text-white py-4 rounded-lg hover:bg-red-700 transition font-bold text-lg shadow-md hover:shadow-lg mb-4"
+                onClick={handleCheckout}
+                disabled={loading}
+                className="w-full bg-red-600 text-white py-4 rounded-lg hover:bg-red-700 transition font-bold text-lg shadow-md hover:shadow-lg mb-4 px-4 flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                Proceed to Checkout
+                {loading ? "Loading..." : "Proceed to Checkout"}
               </button>
 
               {/* Trust Badges - Flex */}

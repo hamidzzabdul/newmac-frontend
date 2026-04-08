@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { Home, Search, ArrowLeft, ShoppingBag } from "lucide-react";
+import "@/app/globals.css";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-linear-to-b from-gray-50 via-white to-gray-50 flex flex-col items-center justify-center px-4 py-16">
       <div className="max-w-2xl w-full text-center">
         {/* Animated 404 Icon */}
         <div className="mb-8 relative">
@@ -13,7 +14,7 @@ export default function NotFound() {
             <div className="w-48 h-48 bg-red-100 rounded-full blur-3xl opacity-50 animate-pulse"></div>
           </div>
           <div className="relative">
-            <h1 className="text-9xl md:text-[12rem] font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-600 to-red-800 leading-none select-none">
+            <h1 className="text-9xl md:text-[12rem] font-black text-transparent bg-clip-text bg-linear-to-r from-red-400 via-red-600 to-red-800 leading-none select-none tex-">
               404
             </h1>
           </div>

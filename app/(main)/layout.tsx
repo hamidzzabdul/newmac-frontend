@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "@/app/globals.css";
-import NavBar from "@/components/NavBar"; // client component
-import Footer from "@/components/Footer"; // can be server
-import CartProvider from "@/services/CartProvider"; // client component
-import { ClerkProvider } from "@clerk/nextjs";
+import NavBar from "@/components/NavBar";
+import Footer from "@/components/Footer";
+import CartProvider from "@/services/CartProvider";
+import { AuthProvider } from "@/hooks/UseAuth";
 import { Providers } from "@/services/QueryProvider";
 import { Toaster } from "react-hot-toast";
+import "@/app/globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Newmac Butchery",
+  title: "Newmark Butchery",
   description: "Best meat supplier in Nairobi",
 };
 
@@ -25,21 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <Providers>
-        <html lang="en">
-          <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          >
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <AuthProvider>
+          <Providers>
             <CartProvider>
               <NavBar />
               {children}
               <Toaster />
               <Footer />
             </CartProvider>
-          </body>
-        </html>
-      </Providers>
-    </ClerkProvider>
+          </Providers>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

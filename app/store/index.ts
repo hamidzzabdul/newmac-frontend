@@ -3,7 +3,7 @@ import cartReducer from "@/app/store/features/CartSlice";
 import { loadCart, saveCart } from "./LocalStorage";
 
 const preloadedState = {
-  cart: loadCart() ?? { items: [] }
+  cart: loadCart() ?? { items: [] },
 };
 
 export const store = configureStore({
@@ -13,13 +13,11 @@ export const store = configureStore({
   preloadedState,
 });
 
-
 if (typeof window !== "undefined") {
   store.subscribe(() => {
     saveCart(store.getState().cart);
   });
 }
-
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

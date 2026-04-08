@@ -21,7 +21,7 @@ const faqs: FAQ[] = [
     category: "Ordering",
     question: "Can I modify or cancel my order?",
     answer:
-      "You can modify or cancel your order within 1 hour of placing it. Please contact our customer service immediately at +254 XXX XXX XXX or email us at orders@newmac.com. Once your order is being processed, changes may not be possible.",
+      "You can modify or cancel your order within 1 hour of placing it. Please contact our customer service immediately at +254 XXX XXX XXX or email us at orders@NewMark.com. Once your order is being processed, changes may not be possible.",
   },
   {
     category: "Ordering",

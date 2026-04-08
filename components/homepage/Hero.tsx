@@ -19,7 +19,7 @@ const Hero = () => {
         <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/70 to-black/40"></div>
 
         {/* Content Container */}
-        <div className="relative h-full max-w-7xl mx-auto px-6 flex items-center">
+        <div className="relative h-full max-w-8xl mx-auto px-6 flex items-center">
           <div className="w-full md:w-2/3 lg:w-1/2 space-y-6 animate-fade-in">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 border border-red-500/50 rounded-full backdrop-blur-sm">
@@ -31,11 +31,11 @@ const Hero = () => {
 
             {/* Main Heading */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Welcome to <span className="text-red-500">NewMac</span>
-              <br />
+              Welcome to <span className="text-red-500 w-full">NewMark</span>
+            </h1>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white">
               Online Butchery
             </h1>
-
             {/* Description */}
             <p className="text-lg md:text-xl text-gray-200 leading-relaxed max-w-xl">
               Order premium beef, goat & lamb online and get it delivered fresh

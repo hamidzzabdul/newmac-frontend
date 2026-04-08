@@ -14,7 +14,7 @@ function Footer() {
             <div className="inline-block w-fit">
               <Link href="/">
                 <div className="bg-red-600 px-4 py-3 rounded-md hover:bg-red-700 transition-colors">
-                  <h1 className="text-2xl font-bold text-white">NewMac</h1>
+                  <h1 className="text-2xl font-bold text-white">NewMark</h1>
                 </div>
               </Link>
             </div>
@@ -131,7 +131,7 @@ function Footer() {
               </a>
 
               <a
-                href="mailto:info@newmac.co.ke"
+                href="mailto:info@NewMark.co.ke"
                 className="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors group"
               >
                 <div className="p-2 bg-gray-800 rounded-md group-hover:bg-red-600 transition-colors">
@@ -140,7 +140,7 @@ function Footer() {
                     className="text-red-500 group-hover:text-white"
                   />
                 </div>
-                <span className="text-sm">info@newmac.co.ke</span>
+                <span className="text-sm">info@NewMark.co.ke</span>
               </a>
 
               <div className="flex items-center gap-3 text-gray-400">
@@ -189,7 +189,7 @@ function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-          <p>© 2025 NewMac. All Rights Reserved.</p>
+          <p>© 2025 NewMark. All Rights Reserved.</p>
           <div className="flex gap-6">
             <Link
               href="/privacy"

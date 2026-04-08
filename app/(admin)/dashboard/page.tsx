@@ -1,29 +1,247 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import DashboardActions from "../components/DashboardActions";
+import { getAdminOrders } from "@/lib/api/orders"; // adjust path
 
-function Page() {
+type OrderItem = {
+  product?: {
+    _id?: string;
+    name?: string;
+    price?: number;
+    image?: string;
+  };
+  name?: string;
+  price?: number;
+  qty?: number;
+  quantity?: number;
+};
+
+type Order = {
+  _id: string;
+  orderNumber?: string;
+  customerName?: string;
+  phone?: string;
+  totalAmount?: number;
+  total?: number;
+  amount?: number;
+  status?: string;
+  paymentStatus?: string;
+  createdAt?: string;
+  items?: OrderItem[];
+  user?: {
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
+  };
+};
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-KE", {
+    style: "currency",
+    currency: "KES",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getCustomerName(order: Order) {
+  if (order.customerName) return order.customerName;
+
+  const fullName = [order.user?.firstName, order.user?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (fullName) return fullName;
+  if (order.user?.name) return order.user.name;
+  if (order.phone) return order.phone;
+
+  return "Unknown Customer";
+}
+
+function getOrderAmount(order: Order) {
+  return Number(order.totalAmount ?? order.total ?? order.amount ?? 0);
+}
+
+function getOrderProduct(order: Order) {
+  if (!order.items || order.items.length === 0) return "No items";
+  if (order.items.length === 1) {
+    return (
+      order.items[0].product?.name || order.items[0].name || "Unnamed product"
+    );
+  }
+  return `${order.items.length} items`;
+}
+
+function getStatusClasses(status?: string) {
+  const s = (status || "").toLowerCase();
+
+  if (["delivered", "paid", "completed"].includes(s)) {
+    return "bg-green-100 text-green-700";
+  }
+
+  if (["processing", "pending"].includes(s)) {
+    return "bg-yellow-100 text-yellow-700";
+  }
+
+  if (["shipped", "in transit"].includes(s)) {
+    return "bg-blue-100 text-blue-700";
+  }
+
+  if (["cancelled", "failed"].includes(s)) {
+    return "bg-red-100 text-red-700";
+  }
+
+  return "bg-gray-100 text-gray-700";
+}
+
+export default function Page() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await getAdminOrders();
+        console.log("dashboard response:", response);
+
+        const normalizedOrders: Order[] = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.orders)
+            ? response.orders
+            : Array.isArray(response?.data)
+              ? response.data
+              : Array.isArray(response?.data?.orders)
+                ? response.data.orders
+                : [];
+
+        setOrders(normalizedOrders);
+      } catch (err: any) {
+        console.error(err);
+        setError(err?.message || "Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  const dashboard = useMemo(() => {
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + getOrderAmount(order),
+      0,
+    );
+
+    const totalOrders = orders.length;
+
+    const deliveredOrders = orders.filter((o) =>
+      ["delivered", "confirmed"].includes((o.status || "").toLowerCase()),
+    ).length;
+
+    const pendingOrders = orders.filter((o) =>
+      ["pending", "processing"].includes((o.status || "").toLowerCase()),
+    ).length;
+
+    const uniqueCustomers = new Set(
+      orders.map((o) => getCustomerName(o)).filter(Boolean),
+    ).size;
+
+    const productMap = new Map<
+      string,
+      { name: string; sold: number; revenue: number }
+    >();
+
+    for (const order of orders) {
+      const amount = getOrderAmount(order);
+
+      for (const item of order.items || []) {
+        const name = item.product?.name || item.name || "Unnamed product";
+        const qty = Number(item.qty ?? item.quantity ?? 1);
+        const price = Number(item.price ?? item.product?.price ?? 0);
+
+        if (!productMap.has(name)) {
+          productMap.set(name, { name, sold: 0, revenue: 0 });
+        }
+
+        const existing = productMap.get(name)!;
+        existing.sold += qty;
+        existing.revenue += price > 0 ? qty * price : amount;
+      }
+    }
+
+    const topProducts = [...productMap.values()]
+      .sort((a, b) => b.sold - a.sold)
+      .slice(0, 5);
+
+    const recentOrders = [...orders]
+      .sort((a, b) => {
+        const ad = new Date(a.createdAt || 0).getTime();
+        const bd = new Date(b.createdAt || 0).getTime();
+        return bd - ad;
+      })
+      .slice(0, 5);
+
+    return {
+      totalRevenue,
+      totalOrders,
+      deliveredOrders,
+      pendingOrders,
+      uniqueCustomers,
+      topProducts,
+      recentOrders,
+    };
+  }, [orders]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-white border border-red-200 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-red-600">
+            Failed to load dashboard
+          </h2>
+          <p className="text-sm text-gray-600 mt-2">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
         <p className="text-gray-600 mt-1">
-          Welcome back! Here&apos; what&apos;s happening with your store today.
+          Welcome back! Here&apos;s what&apos;s happening with your store today.
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Revenue */}
         <div className="bg-white rounded-lg p-5 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Revenue</p>
               <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                KSh 145,230
+                {formatCurrency(dashboard.totalRevenue)}
               </h3>
-              <p className="text-xs text-green-600 mt-2">
-                +12.5% from last month
+              <p className="text-xs text-gray-500 mt-2">
+                From {dashboard.totalOrders} total orders
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -44,14 +262,15 @@ function Page() {
           </div>
         </div>
 
-        {/* Total Orders */}
         <div className="bg-white rounded-lg p-5 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Orders</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">342</h3>
-              <p className="text-xs text-green-600 mt-2">
-                +8.2% from last month
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {dashboard.totalOrders}
+              </h3>
+              <p className="text-xs text-gray-500 mt-2">
+                {dashboard.pendingOrders} pending / processing
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -72,13 +291,16 @@ function Page() {
           </div>
         </div>
 
-        {/* Products */}
         <div className="bg-white rounded-lg p-5 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Products</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">87</h3>
-              <p className="text-xs text-gray-500 mt-2">3 out of stock</p>
+              <p className="text-sm text-gray-600">Delivered Orders</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {dashboard.deliveredOrders}
+              </h3>
+              <p className="text-xs text-gray-500 mt-2">
+                Completed fulfillment
+              </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
               <svg
@@ -98,14 +320,15 @@ function Page() {
           </div>
         </div>
 
-        {/* Customers */}
         <div className="bg-white rounded-lg p-5 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Customers</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">1,248</h3>
-              <p className="text-xs text-green-600 mt-2">
-                +15.3% from last month
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {dashboard.uniqueCustomers}
+              </h3>
+              <p className="text-xs text-gray-500 mt-2">
+                Unique customers from orders
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
@@ -126,23 +349,23 @@ function Page() {
           </div>
         </div>
       </div>
+
       <DashboardActions />
 
-      {/* Charts and Tables Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders */}
         <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Recent Orders
             </h2>
             <Link
-              href={"dashboard/orders"}
+              href="/dashboard/orders"
               className="text-sm text-blue-600 hover:text-blue-700"
             >
               View all
             </Link>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -165,117 +388,73 @@ function Page() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                <tr>
-                  <td className="py-3 text-sm text-gray-900">#ORD-2341</td>
-                  <td className="py-3 text-sm text-gray-900">John Kamau</td>
-                  <td className="py-3 text-sm text-gray-600">
-                    Premium Beef Steak
-                  </td>
-                  <td className="py-3 text-sm text-gray-900">KSh 2,450</td>
-                  <td className="py-3">
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                      Delivered
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3 text-sm text-gray-900">#ORD-2340</td>
-                  <td className="py-3 text-sm text-gray-900">Mary Wanjiru</td>
-                  <td className="py-3 text-sm text-gray-600">
-                    Chicken Breasts
-                  </td>
-                  <td className="py-3 text-sm text-gray-900">KSh 1,200</td>
-                  <td className="py-3">
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
-                      Processing
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3 text-sm text-gray-900">#ORD-2339</td>
-                  <td className="py-3 text-sm text-gray-900">Peter Ochieng</td>
-                  <td className="py-3 text-sm text-gray-600">Lamb Chops</td>
-                  <td className="py-3 text-sm text-gray-900">KSh 3,800</td>
-                  <td className="py-3">
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
-                      Shipped
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3 text-sm text-gray-900">#ORD-2338</td>
-                  <td className="py-3 text-sm text-gray-900">Sarah Muthoni</td>
-                  <td className="py-3 text-sm text-gray-600">Pork Ribs</td>
-                  <td className="py-3 text-sm text-gray-900">KSh 2,100</td>
-                  <td className="py-3">
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                      Delivered
-                    </span>
-                  </td>
-                </tr>
+                {dashboard.recentOrders.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-6 text-sm text-center text-gray-500"
+                    >
+                      No orders found
+                    </td>
+                  </tr>
+                ) : (
+                  dashboard.recentOrders.map((order) => (
+                    <tr key={order._id}>
+                      <td className="py-3 text-sm text-gray-900">
+                        #
+                        {order.orderNumber || order._id.slice(-6).toUpperCase()}
+                      </td>
+                      <td className="py-3 text-sm text-gray-900">
+                        {getCustomerName(order)}
+                      </td>
+                      <td className="py-3 text-sm text-gray-600">
+                        {getOrderProduct(order)}
+                      </td>
+                      <td className="py-3 text-sm text-gray-900">
+                        {formatCurrency(getOrderAmount(order))}
+                      </td>
+                      <td className="py-3">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClasses(order.status)}`}
+                        >
+                          {order.status || "Unknown"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Top Selling Products */}
         <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Top Selling</h2>
-            <button className="text-sm text-blue-600 hover:text-blue-700">
-              View all
-            </button>
           </div>
+
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Premium Beef Steak
-                </p>
-                <p className="text-xs text-gray-600">128 sold</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-900">KSh 2,450</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Chicken Breasts
-                </p>
-                <p className="text-xs text-gray-600">95 sold</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-900">KSh 1,200</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Lamb Chops</p>
-                <p className="text-xs text-gray-600">82 sold</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-900">KSh 3,800</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Pork Ribs</p>
-                <p className="text-xs text-gray-600">67 sold</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-900">KSh 2,100</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Ground Beef</p>
-                <p className="text-xs text-gray-600">54 sold</p>
-              </div>
-              <p className="text-sm font-semibold text-gray-900">KSh 890</p>
-            </div>
+            {dashboard.topProducts.length === 0 ? (
+              <p className="text-sm text-gray-500">No product sales yet</p>
+            ) : (
+              dashboard.topProducts.map((product) => (
+                <div key={product.name} className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {product.name}
+                    </p>
+                    <p className="text-xs text-gray-600">{product.sold} sold</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {formatCurrency(product.revenue)}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default Page;

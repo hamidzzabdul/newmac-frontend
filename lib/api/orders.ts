@@ -9,34 +9,136 @@ export default function to254(phone: string) {
   return p; // last resort
 }
 
-export const createOrder = async(payload: any) => {
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem("auth_token");
+  } catch {
+    return null;
   }
-
-export const startMpesaStkPush = async (orderId: string, phone: string)=> {
-    const res = await fetch(`${API_BASE_URL}/orders/${orderId}/mpesa/stkpush`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
-      cache: "no-store",
-    });
-  
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
 }
 
+export const createOrder = async (payload: any) => {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+};
+
+export const startMpesaStkPush = async (orderId: string, phone: string) => {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/${orderId}/mpesa/stkpush`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ phone }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+};
+
 export async function getOrder(orderId: string) {
-    const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-      method: "GET",
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getMyOrders() {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/my-orders`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getAdminOrders() {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/admin/all`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getOrderById(orderId: string) {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/admin/${orderId}`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateOrderStatus(orderId: string, status: string) {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/admin/${orderId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// Paystack integration
+export async function initializePaystackPayment(orderId: string) {
+  const token = getAuthToken();
+  const res = await fetch(
+    `${API_BASE_URL}/orders/${orderId}/paystack/initialize`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

@@ -27,7 +27,7 @@ function ContactPage() {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     setFormData({
       ...formData,
@@ -121,10 +121,10 @@ function ContactPage() {
               Response within 24 hours
             </p>
             <a
-              href="mailto:info@newmac.com"
+              href="mailto:info@NewMark.com"
               className="text-red-600 font-semibold hover:text-red-700 cursor-pointer inline-flex items-center gap-2 group"
             >
-              info@newmac.com
+              info@newmark.com
               <span className="group-hover:translate-x-1 transition-transform">
                 →
               </span>

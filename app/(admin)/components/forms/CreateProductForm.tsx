@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,11 @@ function CreateProductForm() {
   } = useForm<CreateProductInput>({
     resolver: zodResolver(createProductSchema),
   });
+
+  useEffect(() => {
+    setValue("images", [], { shouldValidate: false });
+  }, []);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -129,7 +134,7 @@ function CreateProductForm() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  Description<span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={5}
@@ -259,8 +264,11 @@ function CreateProductForm() {
                 </label>
                 <input
                   type="number"
-                  {...register("comparePrice", { valueAsNumber: true })}
                   placeholder="0.00"
+                  {...register("comparePrice", {
+                    setValueAs: (value) =>
+                      value === "" ? undefined : Number(value),
+                  })}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text transition-all"
                 />
                 {errors.comparePrice && (
@@ -343,8 +351,9 @@ function CreateProductForm() {
                   {...register("category")}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
                 >
-                  <option value="">Select category</option>
-                  <option value="beef">Beef</option>
+                  <option value="beef" defaultChecked>
+                    Beef
+                  </option>
                   <option value="goat">Goat</option>
                   <option value="lamb">Lamb</option>
                   <option value="chicken">Chicken</option>
