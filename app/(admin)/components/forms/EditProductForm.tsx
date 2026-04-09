@@ -106,15 +106,15 @@ function EditProductForm({ product }: EditProductFormProps) {
           toast.success("Product updated!", { duration: 1500 });
           setTimeout(() => {
             const redirectToastId = toast.loading("Redirecting...", {
-              duration: 2000,
+              duration: 3000,
             });
 
             // Step 3: After 8 seconds, redirect and dismiss the loading toast
             setTimeout(() => {
               toast.dismiss(redirectToastId);
-              router.push("/dashboard/products");
+              window.location.href = "/dashboard/products";
             }, 4000);
-          }, 2000); // wait for success toast to disappear
+          }, 3000); // wait for success toast to disappear
         },
         onError: (err: any) => {
           toast.error(err?.message || "Something went wrong");
@@ -137,6 +137,15 @@ function EditProductForm({ product }: EditProductFormProps) {
   const onError = (errors: any) => {
     console.log("FORM ERRORS:", errors);
   };
+
+  const inputClass = `w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all ${
+    isSubmitting ? "opacity-50 cursor-not-allowed bg-gray-50" : "cursor-text"
+  }`;
+
+  const selectClass = `w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all ${
+    isSubmitting ? "opacity-50 cursor-not-allowed bg-gray-50" : "cursor-pointer"
+  }`;
+
   return (
     <form onSubmit={handleSubmit(onSubmit, onError)}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -156,7 +165,8 @@ function EditProductForm({ product }: EditProductFormProps) {
                   type="text"
                   placeholder="Premium Beef Steak"
                   {...register("name")}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text transition-all"
+                  disabled={isSubmitting}
+                  className={inputClass}
                 />
                 {errors.name && (
                   <p className="text-xs text-red-500 mt-1">
@@ -173,7 +183,8 @@ function EditProductForm({ product }: EditProductFormProps) {
                   rows={5}
                   {...register("description")}
                   placeholder="Describe your product..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text resize-none transition-all"
+                  disabled={isSubmitting}
+                  className={inputClass}
                 />
                 {errors.description && (
                   <p className="text-xs text-red-500 mt-1">
@@ -208,6 +219,7 @@ function EditProductForm({ product }: EditProductFormProps) {
                     id="productImageInput"
                     accept="image/*"
                     onChange={handleImageChange}
+                    disabled={isSubmitting}
                     multiple
                   />
                 </label>
@@ -278,7 +290,8 @@ function EditProductForm({ product }: EditProductFormProps) {
                   step="0.01"
                   {...register("pricePerKg", { valueAsNumber: true })}
                   placeholder="0.00"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text transition-all"
+                  disabled={isSubmitting}
+                  className={inputClass}
                 />
                 {errors.pricePerKg && (
                   <p className="text-xs text-red-500 mt-1">
@@ -295,7 +308,8 @@ function EditProductForm({ product }: EditProductFormProps) {
                   step="0.01"
                   {...register("comparePrice", { valueAsNumber: true })}
                   placeholder="0.00"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text transition-all"
+                  disabled={isSubmitting}
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -316,7 +330,8 @@ function EditProductForm({ product }: EditProductFormProps) {
                   step="0.01"
                   placeholder="0"
                   {...register("stockkg", { valueAsNumber: true })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text transition-all"
+                  disabled={isSubmitting}
+                  className={inputClass}
                 />
                 {errors.stockkg && (
                   <p className="text-xs text-red-500 mt-1">
@@ -337,7 +352,8 @@ function EditProductForm({ product }: EditProductFormProps) {
             </h2>
             <select
               {...register("visibility")}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
+              disabled={isSubmitting}
+              className={inputClass}
             >
               <option value="visible">Visible</option>
               <option value="hidden">Hidden</option>
@@ -351,7 +367,8 @@ function EditProductForm({ product }: EditProductFormProps) {
             </h2>
             <select
               {...register("category")}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
+              disabled={isSubmitting}
+              className={inputClass}
             >
               <option value="beef" defaultChecked>
                 Beef
@@ -374,6 +391,7 @@ function EditProductForm({ product }: EditProductFormProps) {
               <input
                 type="checkbox"
                 {...register("featured")}
+                disabled={isSubmitting}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
@@ -384,6 +402,7 @@ function EditProductForm({ product }: EditProductFormProps) {
               <input
                 type="checkbox"
                 {...register("onSale")}
+                disabled={isSubmitting}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
@@ -394,6 +413,7 @@ function EditProductForm({ product }: EditProductFormProps) {
               <input
                 type="checkbox"
                 {...register("allowBackorder")}
+                disabled={isSubmitting}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">

@@ -7,9 +7,9 @@ import NavActions from "./NavActions";
 import { FaBars, FaInstagram, FaSquareFacebook } from "react-icons/fa6";
 import { FaTiktok } from "react-icons/fa";
 import { IoSearchOutline, IoClose } from "react-icons/io5";
+import TopBar from "./TopBar";
 
 function NavBar() {
-  const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const router = useRouter();
@@ -18,7 +18,6 @@ function NavBar() {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
-      setShowSearch(false);
       setSearchQuery("");
     }
   };
@@ -26,34 +25,7 @@ function NavBar() {
   return (
     <>
       {/* Top Bar */}
-      <div className="w-full bg-red-600 py-2.5">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-white text-sm">
-          <p className="font-medium">Free delivery on orders above KSh 5,000</p>
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              href="https://facebook.com"
-              target="_blank"
-              className="hover:opacity-80"
-            >
-              <FaSquareFacebook size={18} />
-            </Link>
-            <Link
-              href="https://tiktok.com"
-              target="_blank"
-              className="hover:opacity-80"
-            >
-              <FaTiktok size={17} />
-            </Link>
-            <Link
-              href="https://instagram.com"
-              target="_blank"
-              className="hover:opacity-80"
-            >
-              <FaInstagram size={17} />
-            </Link>
-          </div>
-        </div>
-      </div>
+      <TopBar />
 
       {/* Main Navigation */}
       <nav className="w-full bg-white shadow-md sticky top-0 z-40">
@@ -112,66 +84,11 @@ function NavBar() {
               >
                 <FaBars size={24} />
               </button>
-              <NavActions
-                showSearch={showSearch}
-                setShowSearch={setShowSearch}
-              />
+              <NavActions />
             </div>
           </div>
         </div>
       </nav>
-
-      {/* Search Modal */}
-      {showSearch && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-24">
-          <div className="bg-white w-full max-w-2xl mx-4 p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Search</h2>
-              <button
-                onClick={() => setShowSearch(false)}
-                className="text-gray-500 hover:text-gray-700"
-                aria-label="Close"
-              >
-                <IoClose size={28} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSearch} className="relative mb-6">
-              <IoSearchOutline
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                size={22}
-              />
-              <input
-                type="text"
-                placeholder="Search for products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 focus:outline-none focus:border-red-600"
-              />
-            </form>
-
-            <div>
-              <p className="text-sm text-gray-600 mb-3">Popular:</p>
-              <div className="flex flex-wrap gap-2">
-                {["Beef", "Goat", "Lamb", "Chicken", "Steak"].map((term) => (
-                  <button
-                    key={term}
-                    onClick={() => {
-                      setSearchQuery(term);
-                      router.push(`/shop?search=${term}`);
-                      setShowSearch(false);
-                    }}
-                    className="px-4 py-2 bg-gray-100 hover:bg-red-600 hover:text-white text-gray-700 text-sm transition-colors"
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile Menu */}
       {showMobileMenu && (

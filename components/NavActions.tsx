@@ -10,12 +10,7 @@ import toast from "react-hot-toast";
 import AuthModal from "./AuthModal";
 import { useAuth } from "@/hooks/UseAuth";
 
-interface NavActionsProps {
-  setShowSearch: React.Dispatch<React.SetStateAction<boolean>>;
-  showSearch: boolean;
-}
-
-function NavActions({ setShowSearch, showSearch }: NavActionsProps) {
+function NavActions() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -75,7 +70,7 @@ function NavActions({ setShowSearch, showSearch }: NavActionsProps) {
                   }}
                 >
                   {/* User header */}
-                  <div className="px-4 py-4 border-b border-gray-100 bg-gradient-to-r from-red-50 to-rose-100">
+                  <div className="px-4 py-4 border-b border-gray-100 bg-linear-to-r from-red-50 to-rose-100">
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 bg-red-600 rounded-full flex items-center justify-center shadow-md shadow-red-200">
                         <User className="text-white" size={20} />
@@ -136,28 +131,29 @@ function NavActions({ setShowSearch, showSearch }: NavActionsProps) {
                         size={15}
                       />
                     </Link>
-
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setDropdownOpen(false)}
-                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-red-50 transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors">
-                          <ShoppingBag
-                            className="text-gray-500 group-hover:text-red-600 transition-colors"
-                            size={16}
-                          />
+                    {user?.role === "admin" && (
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-red-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                            <ShoppingBag
+                              className="text-gray-500 group-hover:text-red-600 transition-colors"
+                              size={16}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700 group-hover:text-red-600 transition-colors">
+                            Admin Dashboard
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 group-hover:text-red-600 transition-colors">
-                          Admin Dashboard
-                        </span>
-                      </div>
-                      <ChevronRight
-                        className="text-gray-300 group-hover:text-red-400 transition-colors"
-                        size={15}
-                      />
-                    </Link>
+                        <ChevronRight
+                          className="text-gray-300 group-hover:text-red-400 transition-colors"
+                          size={15}
+                        />
+                      </Link>
+                    )}
                   </div>
 
                   {/* Logout */}
@@ -196,15 +192,6 @@ function NavActions({ setShowSearch, showSearch }: NavActionsProps) {
         </div>
 
         {/* Search */}
-        <button
-          onClick={() => setShowSearch(!showSearch)}
-          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-        >
-          <IoSearchOutline
-            className="text-gray-700 hover:text-red-600 transition-colors"
-            size={24}
-          />
-        </button>
 
         {/* Cart */}
         <Link href="/cart">

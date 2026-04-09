@@ -8,7 +8,9 @@ const EmptyCart = () => {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <button className="flex items-center gap-2 text-gray-700 hover:text-red-600 transition">
             <ArrowLeft size={22} />
-            <span className="font-semibold">Back to Shop</span>
+            <Link href="/shop" className="font-semibold">
+              Back to Shop
+            </Link>
           </button>
         </div>
       </div>

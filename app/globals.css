@@ -135,3 +135,84 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+/* 
+@theme inline {
+  --color-red-100: #F5E6E3;
+  --color-red-200: #E8C4BC;
+  --color-red-300: #D99E92;
+  --color-red-400: #C87A6A;
+  --color-red-500: #B05A48;
+  --color-red-600: #8B3A2A;
+
+  --color-red-700: #6E2B1C;
+  --color-red-800: #5C1F10;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #2C1A14;
+  --border: #E8C4BC;
+  --ring: #8B3A2A;
+  --input: #E8C4BC;
+  --primary: #8B3A2A;
+  --primary-foreground: #ffffff;
+  --secondary: #F5E6E3;
+  --secondary-foreground: #8B3A2A;
+  --muted: #F5E6E3;
+  --muted-foreground: #6E2B1C;
+  --accent: #F5E6E3;
+  --accent-foreground: #8B3A2A;
+  --destructive: #e02020;
+  --destructive-foreground: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #2C1A14;
+  --popover: #ffffff;
+  --popover-foreground: #2C1A14;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #1a0a06;
+  --foreground: #F5E6E3;
+  --border: #6E2B1C;
+  --ring: #C87A6A;
+  --input: #6E2B1C;
+  --primary: #C87A6A;
+  --primary-foreground: #1a0a06;
+  --secondary: #2C1A14;
+  --secondary-foreground: #F5E6E3;
+  --muted: #2C1A14;
+  --muted-foreground: #D99E92;
+  --accent: #2C1A14;
+  --accent-foreground: #F5E6E3;
+  --destructive: #e02020;
+  --destructive-foreground: #ffffff;
+  --card: #1a0a06;
+  --card-foreground: #F5E6E3;
+  --popover: #1a0a06;
+  --popover-foreground: #F5E6E3;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+} */

@@ -52,6 +52,13 @@ interface Order {
 }
 
 const MyOrders = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    console.log("Component mounted, fetching orders...");
+  }, []);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,12 +67,20 @@ const MyOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchOrders = async () => {
+    console.log("Fetching orders...");
     try {
       setLoading(true);
       setError(null);
+
+      // Add this temporarily to debug
+      const token = localStorage.getItem("auth_token");
+      console.log("Token:", token);
+
       const res = await getMyOrders();
+      console.log("Orders response:", res);
       setOrders(res.data.orders);
     } catch (err: any) {
+      console.error("Full error:", err);
       setError(err.message || "Failed to load orders");
     } finally {
       setLoading(false);
@@ -73,8 +88,9 @@ const MyOrders = () => {
   };
 
   useEffect(() => {
+    if (!mounted) return; // ← wait for client
     fetchOrders();
-  }, []);
+  }, [mounted]);
 
   const getStatusConfig = (status: Order["orderStatus"]) => {
     const configs = {
@@ -142,7 +158,7 @@ const MyOrders = () => {
   // ── Loading State ──────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="w-10 h-10 text-gray-400 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading your orders...</p>
@@ -154,7 +170,7 @@ const MyOrders = () => {
   // ── Error State ────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center bg-white rounded-2xl p-10 shadow-sm border border-gray-200">
           <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -173,7 +189,7 @@ const MyOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="mb-8">

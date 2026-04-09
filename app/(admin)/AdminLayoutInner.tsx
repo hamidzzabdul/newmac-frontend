@@ -54,7 +54,7 @@ export default function AdminLayoutInner({
     return null;
   }
 
-  const initials = user?.fullName ? getInitials(user.fullName) : "A";
+  const initials = user?.name ? getInitials(user.name) : "A";
 
   return (
     <div className="h-screen flex overflow-hidden bg-[#F7F8FA]">
@@ -83,57 +83,11 @@ export default function AdminLayoutInner({
         </div>
 
         {/* Profile + logout */}
-        <div className="p-4 border-t border-gray-200">
-          {/* Collapsed view (small screens): just initials avatar */}
-          <div className="flex lg:hidden justify-center">
-            <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-semibold">
-              {initials}
-            </div>
-          </div>
-
-          {/* Expanded view (large screens): full name, email, logout */}
-          <div className="hidden lg:flex items-center gap-3">
-            {/* Avatar with initials */}
-            <div className="w-9 h-9 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-semibold shrink-0">
-              {initials}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.fullName ?? "Admin"}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.email ?? ""}
-              </p>
-            </div>
-
-            {/* Logout button */}
-            <button
-              onClick={handleLogout}
-              title="Log out"
-              className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-
-          {/* Logout button for collapsed sidebar (small/md screens) */}
-          <div className="flex lg:hidden justify-center mt-3">
-            <button
-              onClick={handleLogout}
-              title="Log out"
-              className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <DashboardNav />
-
         <div className="flex-1 overflow-y-auto">
           <Providers>{children}</Providers>
         </div>
