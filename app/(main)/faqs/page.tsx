@@ -21,7 +21,7 @@ const faqs: FAQ[] = [
     category: "Ordering",
     question: "Can I modify or cancel my order?",
     answer:
-      "You can modify or cancel your order within 1 hour of placing it. Please contact our customer service immediately at +254 XXX XXX XXX or email us at orders@NewMark.com. Once your order is being processed, changes may not be possible.",
+      "You can modify or cancel your order within 1 hour of placing it. Please contact our customer service immediately at +254 700 876201 or email us at orders@NewMark.com. Once your order is being processed, changes may not be possible.",
   },
   {
     category: "Ordering",
@@ -75,7 +75,7 @@ const faqs: FAQ[] = [
     category: "Returns",
     question: "What if I receive a damaged order?",
     answer:
-      "If your order arrives damaged or incorrect, please take photos and contact us immediately at +254 XXX XXX XXX. We'll arrange a replacement or refund right away. Your satisfaction is our priority.",
+      "If your order arrives damaged or incorrect, please take photos and contact us immediately at +254 700 876201. We'll arrange a replacement or refund right away. Your satisfaction is our priority.",
   },
 ];
 

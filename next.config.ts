@@ -1,13 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   images: {
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
-        port: "5000",      // specify the port of your backend
+        port: "5000", // specify the port of your backend
         pathname: "/uploads/**",
       },
     ],

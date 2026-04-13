@@ -769,12 +769,21 @@ const CheckoutPage = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Delivery</span>
-                    <span className="font-semibold text-green-600">FREE</span>
+                    <span className="font-semibold text-amber-600 text-right text-xs leading-tight">
+                      Communicated after confirmation
+                    </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center pt-4">
-                  <span className="text-sm font-bold text-gray-900">Total</span>
-                  <span className="text-xl font-bold text-green-600">
+                  <div>
+                    <span className="text-sm font-bold text-gray-900">
+                      Subtotal
+                    </span>
+                    <p className="text-xs text-gray-400 font-normal">
+                      excl. delivery
+                    </p>
+                  </div>
+                  <span className="text-xl font-bold text-gray-900">
                     KSh {total.toLocaleString()}
                   </span>
                 </div>

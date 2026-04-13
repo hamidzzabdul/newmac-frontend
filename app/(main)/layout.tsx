@@ -15,8 +15,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Newmark Butchery",
-  description: "Best meat supplier in Nairobi",
+  metadataBase: new URL("https://newmarkprimemeat.com"),
+  title: {
+    default: "Newmark Butchery",
+    template: "%s | Newmark Butchery",
+  },
+  description:
+    "Premium halal meat supplier in Nairobi offering fresh beef, goat, and lamb with reliable delivery.",
+  applicationName: "Newmark Butchery",
+  authors: [{ name: "Newmark Butchery" }],
+  creator: "Newmark Butchery",
+  publisher: "Newmark Butchery",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  category: "food",
 };
 
 export default function RootLayout({
@@ -27,13 +41,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <AuthProvider>
           <Providers>
             <CartProvider>
               <NavBar />
-              {children}
+
+              <main className="flex-1">{children}</main>
+
               <Toaster />
               <Footer />
             </CartProvider>

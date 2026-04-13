@@ -16,7 +16,11 @@ type Order = {
     | "delivered"
     | "cancelled"
     | "confirmed";
-  payment: { method: "mpesa" | "card" | "cod"; status: string };
+  payment: {
+    method: "mpesa" | "card" | "cod";
+    status: string;
+    paidAt?: string; // ✅ added
+  };
   createdAt: string;
   items: { name: string; quantity: number; price: number }[];
   customer: {
@@ -117,7 +121,6 @@ function EditStatusModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Show different status options depending on payment method
   const isCod = order.payment.method === "cod";
   const availableStatuses = isCod ? COD_STATUSES : ONLINE_STATUSES;
 
@@ -163,14 +166,12 @@ function EditStatusModal({
           </button>
         </div>
 
-        {/* Payment method context — helps admin understand what they're editing */}
         <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
           {isCod
             ? "Cash on delivery — you control the full order flow manually."
             : 'Online payment — "confirmed" is set automatically when payment succeeds. Move the order forward from here.'}
         </div>
 
-        {/* Status options */}
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700">Select new status</p>
           <div className="grid grid-cols-2 gap-2">
@@ -280,7 +281,6 @@ export default function OrdersPage() {
   const filtered = useMemo(() => {
     let data = [...orders];
 
-    // Sort: pending first, then by newest within each status group
     data.sort((a, b) => {
       const pa = STATUS_PRIORITY[a.orderStatus] ?? 9;
       const pb = STATUS_PRIORITY[b.orderStatus] ?? 9;
@@ -288,7 +288,6 @@ export default function OrdersPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    // Tab filter
     if (activeTab === "pending") {
       data = data.filter((o) => o.orderStatus === "pending");
     } else if (activeTab === "cod") {
@@ -297,7 +296,6 @@ export default function OrdersPage() {
       data = data.filter((o) => o.payment.method !== "cod");
     }
 
-    // Search
     const q = search.toLowerCase().trim();
     if (q) {
       data = data.filter(
@@ -308,12 +306,10 @@ export default function OrdersPage() {
       );
     }
 
-    // Status filter
     if (statusFilter) {
       data = data.filter((o) => o.orderStatus === statusFilter);
     }
 
-    // Date filter
     if (dateFilter) {
       data = data.filter((o) => {
         const date = new Date(o.createdAt);
@@ -327,7 +323,6 @@ export default function OrdersPage() {
     return data;
   }, [orders, activeTab, search, statusFilter, dateFilter]);
 
-  // Reset to page 1 whenever filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, search, statusFilter, dateFilter]);
@@ -368,6 +363,29 @@ export default function OrdersPage() {
       month: "short",
       year: "numeric",
     });
+
+  // ✅ Format paidAt — shows time too so it's useful at a glance
+  const formatPaymentDate = (order: Order) => {
+    // COD — payment happens at door, show order date instead
+    if (order.payment.method === "cod") {
+      return new Date(order.createdAt).toLocaleDateString("en-KE", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+    // Card/M-Pesa — show actual paid timestamp if available
+    if (order.payment.paidAt) {
+      return new Date(order.payment.paidAt).toLocaleString("en-KE", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+    return "—"; // initialized but not yet paid
+  };
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "all", label: "All orders" },
@@ -506,6 +524,7 @@ export default function OrdersPage() {
                     "Items",
                     "Total",
                     "Payment",
+                    "Date Paid",
                     "Status",
                     "Actions",
                   ].map((h) => (
@@ -522,7 +541,7 @@ export default function OrdersPage() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-6 py-12 text-center text-gray-400 text-sm"
                     >
                       Loading orders…
@@ -531,7 +550,7 @@ export default function OrdersPage() {
                 ) : error ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-6 py-12 text-center text-red-500 text-sm"
                     >
                       {error}
@@ -540,7 +559,7 @@ export default function OrdersPage() {
                 ) : paginated.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="px-6 py-12 text-center text-gray-400 text-sm"
                     >
                       No orders found.
@@ -586,6 +605,15 @@ export default function OrdersPage() {
                               order.payment?.method}
                           </span>
                         </td>
+                        {/* ✅ Paid At column */}
+                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                          {formatPaymentDate(order)}
+                          {order.payment.method === "cod" && (
+                            <span className="block text-xs text-amber-600 font-medium">
+                              On delivery
+                            </span>
+                          )}
+                        </td>
                         <td className="px-6 py-4">
                           <span
                             className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${
@@ -598,7 +626,6 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            {/* View */}
                             <button
                               onClick={() =>
                                 router.push(`/dashboard/orders/${order._id}`)
@@ -609,7 +636,6 @@ export default function OrdersPage() {
                               <Eye size={17} />
                             </button>
 
-                            {/* Edit — disabled if order is in a locked status */}
                             <button
                               onClick={() =>
                                 !isLocked && setEditingOrder(order)

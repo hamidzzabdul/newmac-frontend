@@ -25,7 +25,7 @@ const certifications = [
     description: "Nairobi County Government",
     img: "",
     issuedBy: "County Government",
-    validUntil: "2025",
+    validUntil: "2026",
   },
   {
     id: 4,
@@ -153,7 +153,7 @@ const Certifications = () => {
             about our certifications and quality standards.
           </p>
           <a
-            href="mailto:info@NewMark.co.ke"
+            href="mailto:info@newmarkprimemeat.com"
             className="inline-block px-8 py-4 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             Contact Us for More Information

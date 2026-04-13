@@ -2,7 +2,7 @@ import { getAllProducts } from "@/lib/api/products";
 import ShopClient from "./ShopClient";
 
 export default async function ShopPage() {
-  const data = await getAllProducts();
+  const data = await getAllProducts({ limit: 100 });
 
   return <ShopClient products={data.docs} />;
 }

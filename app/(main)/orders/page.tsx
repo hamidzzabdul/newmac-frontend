@@ -13,7 +13,9 @@ import {
   RefreshCw,
   BadgeCheck,
 } from "lucide-react";
-import { getMyOrders } from "@/lib/api/orders"; // adjust path as needed
+import { getMyOrders, downloadReceipt } from "@/lib/api/orders"; // adjust path as needed
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface OrderItem {
   product: string;
@@ -60,11 +62,15 @@ const MyOrders = () => {
   }, []);
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   const fetchOrders = async () => {
     console.log("Fetching orders...");
@@ -154,6 +160,37 @@ const MyOrders = () => {
       );
     return matchesStatus && matchesSearch;
   });
+
+  const handleDownloadReceipt = async (
+    orderId: string,
+    orderNumber: string,
+  ) => {
+    if (downloadingOrderId === orderId) return;
+
+    try {
+      setDownloadingOrderId(orderId);
+
+      console.log("Downloading receipt for:", orderId); // 👈
+      const blob = await downloadReceipt(orderId);
+      console.log("Blob received:", blob.type, blob.size); // 👈
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `receipt-${orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Invoice downloaded successfully");
+    } catch (err: any) {
+      console.error("Download failed at:", err); // 👈
+      toast.error(err.message || "Failed to download invoice");
+    } finally {
+      setDownloadingOrderId(null);
+    }
+  };
 
   // ── Loading State ──────────────────────────────────────────────
   if (loading) {
@@ -382,14 +419,22 @@ const MyOrders = () => {
                       <div className="flex flex-col gap-2">
                         <button
                           onClick={() => setSelectedOrder(order)}
-                          className="px-6 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                          className="px-6 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                           View Details
                         </button>
-                        <button className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleDownloadReceipt(order._id, order.orderNumber)
+                          }
+                          disabled={downloadingOrderId === order._id}
+                          className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                           <Download className="w-4 h-4" />
-                          Invoice
+                          {downloadingOrderId === order._id
+                            ? "Downloading..."
+                            : "Invoice"}
                         </button>
                       </div>
                     </div>
@@ -563,11 +608,20 @@ const MyOrders = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <button className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedOrder(null);
+                    router.push(`/orders/track/${selectedOrder.orderNumber}`);
+                  }}
+                  className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors cursor-pointer"
+                >
                   Track Order
                 </button>
-                <button className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={() => router.push("/contact")}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   Contact Support
                 </button>
               </div>

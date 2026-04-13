@@ -8,20 +8,14 @@ import ProductsGrid from "@/components/ProductGrid";
 import NoProductsFound from "@/components/NoProductsFound";
 import Pagination from "@/components/shop/Pagination";
 import { Product } from "@/types/product";
+import Link from "next/link";
+import { Sparkles, Beef, ShieldCheck, Truck } from "lucide-react";
 
 interface ShopClientProps {
   products: Product[];
 }
 
 const categories = ["All", "beef", "goat", "lamb", "chicken", "camel"];
-const priceRanges = [
-  { label: "All Prices", min: 0, max: Infinity },
-  { label: "Under KSh 500", min: 0, max: 500 },
-  { label: "KSh 500 - 800", min: 500, max: 800 },
-  { label: "KSh 800 - 1000", min: 800, max: 1000 },
-  { label: "Above KSh 1000", min: 1000, max: Infinity },
-];
-
 const ITEMS_PER_PAGE = 12;
 
 export default function ShopClient({ products }: ShopClientProps) {
@@ -38,7 +32,7 @@ export default function ShopClient({ products }: ShopClientProps) {
 
     if (searchQuery) {
       filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -65,13 +59,11 @@ export default function ShopClient({ products }: ShopClientProps) {
     return filtered;
   }, [products, searchQuery, selectedCategory, sortBy, showInStock]);
 
-  // Calculate pagination
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     const id = setTimeout(() => setCurrentPage(1), 0);
     return () => clearTimeout(id);
@@ -79,18 +71,26 @@ export default function ShopClient({ products }: ShopClientProps) {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    // Scroll to top of products grid
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedCategory("All");
-    setSelectedPriceRange(0);
     setSortBy("default");
     setShowInStock(false);
     setCurrentPage(1);
   };
+
+  const heroTitle =
+    selectedCategory === "All"
+      ? "Premium Halal Meat Collection"
+      : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Collection`;
+
+  const heroDescription =
+    selectedCategory === "All"
+      ? "Discover fresh, premium-quality cuts carefully prepared for your everyday meals and special occasions."
+      : `Explore our fresh ${selectedCategory} selection, prepared with quality, care, and reliable delivery.`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,27 +99,24 @@ export default function ShopClient({ products }: ShopClientProps) {
           categories={categories}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
-          selectedPriceRange={selectedPriceRange}
-          setSelectedPriceRange={setSelectedPriceRange}
           showInStock={showInStock}
           setShowInStock={setShowInStock}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           clearFilters={clearFilters}
         />
-        <MobileFiltersDrawer
+
+        {/* <MobileFiltersDrawer
           showFilters={showFilters}
           setShowFilters={setShowFilters}
           categories={categories}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
-          priceRanges={priceRanges}
-          selectedPriceRange={selectedPriceRange}
-          setSelectedPriceRange={setSelectedPriceRange}
           showInStock={showInStock}
           setShowInStock={setShowInStock}
           clearFilters={clearFilters}
-        />
+        /> */}
+
         <main className="flex-1">
           <ProductsHeader
             filteredProducts={filteredProducts}
@@ -128,6 +125,7 @@ export default function ShopClient({ products }: ShopClientProps) {
             sortBy={sortBy}
             setSortBy={setSortBy}
           />
+
           {filteredProducts.length > 0 ? (
             <>
               <ProductsGrid products={currentProducts} />

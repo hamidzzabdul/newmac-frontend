@@ -1,12 +1,32 @@
-export function parseRegisterError(err: any): string {
-  const data = err;
+export function parseApiError(
+  err: any,
+  fallback = "Something went wrong. Please try again.",
+): string {
+  const responseData = err?.response?.data;
 
-  if (!data) return "Registration failed. Please try again.";
+  if (
+    responseData &&
+    typeof responseData.message === "string" &&
+    responseData.message.trim()
+  ) {
+    return responseData.message;
+  }
 
-  // ── Check for duplicate key in all the places it can hide ──────────────────
+  if (typeof err?.message === "string" && err.message.trim()) {
+    try {
+      const parsed = JSON.parse(err.message);
+      if (parsed?.message && typeof parsed.message === "string") {
+        return parsed.message;
+      }
+    } catch {
+      return err.message;
+    }
+  }
+
+  const data = responseData || err;
+
   const code = data?.error?.code ?? data?.error?.errorResponse?.code ?? null;
-
-  const errmsg: string =
+  const errmsg =
     data?.error?.errorResponse?.errmsg ??
     data?.error?.errmsg ??
     data?.message ??
@@ -14,28 +34,14 @@ export function parseRegisterError(err: any): string {
 
   const isDuplicate =
     code === 11000 ||
-    errmsg.includes("duplicate key") ||
-    errmsg.includes("11000") ||
+    String(errmsg).includes("duplicate key") ||
+    String(errmsg).includes("11000") ||
     (typeof data?.message === "string" &&
       data.message.toLowerCase().includes("duplicate"));
 
-  if (isDuplicate) return "A user with this email already exists.";
-
-  // ── Fall back to whatever message the server sent ──────────────────────────
-  return data?.message ?? "Registration failed. Please try again.";
-}
-
-const getAuthHeaders = (): HeadersInit => {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
-
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+  if (isDuplicate) {
+    return "A user with this email already exists.";
   }
 
-  return headers;
-};
+  return fallback;
+}

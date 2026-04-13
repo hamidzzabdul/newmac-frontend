@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import DashboardActions from "../components/DashboardActions";
-import { getAdminOrders } from "@/lib/api/orders"; // adjust path
+import { getAdminOrders } from "@/lib/api/orders";
 
 type OrderItem = {
   product?: {
@@ -27,9 +27,26 @@ type Order = {
   total?: number;
   amount?: number;
   status?: string;
+  orderStatus?: string;
   paymentStatus?: string;
   createdAt?: string;
   items?: OrderItem[];
+  payment?: {
+    method?: "mpesa" | "card" | "cod";
+    status?: "pending" | "paid" | "failed" | "refunded";
+    mpesaReceiptNumber?: string;
+  };
+  shippingAddress?: {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    deliveryNotes?: string;
+    country?: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    phone?: string;
+  };
   user?: {
     name?: string;
     firstName?: string;
@@ -48,18 +65,32 @@ function formatCurrency(value: number) {
 }
 
 function getCustomerName(order: Order) {
-  if (order.customerName) return order.customerName;
+  if (order.customerName?.trim()) return order.customerName;
 
-  const fullName = [order.user?.firstName, order.user?.lastName]
+  const userFullName = [order.user?.firstName, order.user?.lastName]
     .filter(Boolean)
     .join(" ")
     .trim();
 
-  if (fullName) return fullName;
-  if (order.user?.name) return order.user.name;
-  if (order.phone) return order.phone;
+  if (userFullName) return userFullName;
+  if (order.user?.name?.trim()) return order.user.name;
 
-  return "Unknown Customer";
+  const shippingFullName = [
+    order.shippingAddress?.firstName,
+    order.shippingAddress?.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (shippingFullName) return shippingFullName;
+  if (order.shippingAddress?.name?.trim()) return order.shippingAddress.name;
+
+  if (order.phone?.trim()) return order.phone;
+  if (order.user?.phone?.trim()) return order.user.phone;
+  if (order.shippingAddress?.phone?.trim()) return order.shippingAddress.phone;
+
+  return "Guest Customer";
 }
 
 function getOrderAmount(order: Order) {
@@ -76,26 +107,61 @@ function getOrderProduct(order: Order) {
   return `${order.items.length} items`;
 }
 
+function getOrderStatus(order: Order) {
+  return order.orderStatus || order.status || "unknown";
+}
+
+function getPaymentStatus(order: Order) {
+  return order.payment?.status || order.paymentStatus || "unknown";
+}
+
 function getStatusClasses(status?: string) {
   const s = (status || "").toLowerCase();
 
-  if (["delivered", "paid", "completed"].includes(s)) {
-    return "bg-green-100 text-green-700";
-  }
+  function getStatusClasses(status?: string) {
+    const s = (status || "").toLowerCase().trim();
 
-  if (["processing", "pending"].includes(s)) {
-    return "bg-yellow-100 text-yellow-700";
-  }
+    if (["delivered", "confirmed", "completed"].includes(s)) {
+      return "bg-green-100 text-green-700";
+    }
 
-  if (["shipped", "in transit"].includes(s)) {
-    return "bg-blue-100 text-blue-700";
-  }
+    if (["processing", "pending"].includes(s)) {
+      return "bg-yellow-100 text-yellow-700";
+    }
 
-  if (["cancelled", "failed"].includes(s)) {
-    return "bg-red-100 text-red-700";
+    if (["shipped", "in transit"].includes(s)) {
+      return "bg-blue-100 text-blue-700";
+    }
+
+    if (["cancelled", "failed", "refunded"].includes(s)) {
+      return "bg-red-100 text-red-700";
+    }
+
+    if (["paid"].includes(s)) {
+      return "bg-emerald-100 text-emerald-700";
+    }
+
+    return "bg-gray-100 text-gray-700";
   }
 
   return "bg-gray-100 text-gray-700";
+}
+
+function formatDate(date?: string) {
+  if (!date) return "No date";
+  return new Intl.DateTimeFormat("en-KE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
 export default function Page() {
@@ -143,43 +209,31 @@ export default function Page() {
     const totalOrders = orders.length;
 
     const deliveredOrders = orders.filter((o) =>
-      ["delivered", "confirmed"].includes((o.status || "").toLowerCase()),
+      ["delivered", "confirmed", "completed"].includes(
+        getOrderStatus(o).toLowerCase(),
+      ),
     ).length;
 
     const pendingOrders = orders.filter((o) =>
-      ["pending", "processing"].includes((o.status || "").toLowerCase()),
+      ["pending", "processing"].includes(getOrderStatus(o).toLowerCase()),
+    ).length;
+
+    const cancelledOrders = orders.filter((o) =>
+      ["cancelled", "failed"].includes(getOrderStatus(o).toLowerCase()),
+    ).length;
+
+    const paidOrders = orders.filter((o) =>
+      ["paid", "completed", "success"].includes(
+        getPaymentStatus(o).toLowerCase(),
+      ),
     ).length;
 
     const uniqueCustomers = new Set(
       orders.map((o) => getCustomerName(o)).filter(Boolean),
     ).size;
 
-    const productMap = new Map<
-      string,
-      { name: string; sold: number; revenue: number }
-    >();
-
-    for (const order of orders) {
-      const amount = getOrderAmount(order);
-
-      for (const item of order.items || []) {
-        const name = item.product?.name || item.name || "Unnamed product";
-        const qty = Number(item.qty ?? item.quantity ?? 1);
-        const price = Number(item.price ?? item.product?.price ?? 0);
-
-        if (!productMap.has(name)) {
-          productMap.set(name, { name, sold: 0, revenue: 0 });
-        }
-
-        const existing = productMap.get(name)!;
-        existing.sold += qty;
-        existing.revenue += price > 0 ? qty * price : amount;
-      }
-    }
-
-    const topProducts = [...productMap.values()]
-      .sort((a, b) => b.sold - a.sold)
-      .slice(0, 5);
+    const averageOrderValue =
+      totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
     const recentOrders = [...orders]
       .sort((a, b) => {
@@ -187,23 +241,36 @@ export default function Page() {
         const bd = new Date(b.createdAt || 0).getTime();
         return bd - ad;
       })
-      .slice(0, 5);
+      .slice(0, 6);
+
+    const latestOrder = recentOrders[0];
+
+    const fulfillmentRate =
+      totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;
+
+    const paymentRate =
+      totalOrders > 0 ? Math.round((paidOrders / totalOrders) * 100) : 0;
 
     return {
       totalRevenue,
       totalOrders,
       deliveredOrders,
       pendingOrders,
+      cancelledOrders,
+      paidOrders,
       uniqueCustomers,
-      topProducts,
+      averageOrderValue,
       recentOrders,
+      latestOrder,
+      fulfillmentRate,
+      paymentRate,
     };
   }, [orders]);
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="p-4 md:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -212,41 +279,72 @@ export default function Page() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-white border border-red-200 rounded-lg p-6">
+      <div className="p-4 md:p-6">
+        <div className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-red-600">
             Failed to load dashboard
           </h2>
-          <p className="text-sm text-gray-600 mt-2">{error}</p>
+          <p className="mt-2 text-sm text-gray-600">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-        <p className="text-gray-600 mt-1">
-          Welcome back! Here&apos;s what&apos;s happening with your store today.
-        </p>
-      </div>
+    <div className="space-y-6 bg-gray-50 p-4 md:p-6">
+      {/* Header */}
+      <section className="rounded-3xl bg-gradient-to-r from-rose-950 via-red-900 to-orange-800 p-6 text-white shadow-lg md:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm text-white/80">{getGreeting()}</p>
+            <h1 className="mt-2 text-2xl font-bold md:text-3xl">
+              Dashboard Overview
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/80 md:text-base">
+              Monitor store performance, track orders, and manage daily
+              operations for your meat business from one place.
+            </p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg p-5 border border-gray-200">
-          <div className="flex items-center justify-between">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <Link
+              href="/dashboard/orders"
+              className="cursor-pointer rounded-2xl bg-white/10 px-4 py-3 text-sm font-medium backdrop-blur transition hover:bg-white/20"
+            >
+              View Orders
+            </Link>
+            <Link
+              href="/dashboard/products"
+              className="cursor-pointer rounded-2xl bg-white/10 px-4 py-3 text-sm font-medium backdrop-blur transition hover:bg-white/20"
+            >
+              Manage Products
+            </Link>
+            <Link
+              href="/dashboard/#"
+              className="cursor-pointer rounded-2xl bg-white/10 px-4 py-3 text-sm font-medium backdrop-blur transition hover:bg-white/20"
+            >
+              Customers
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-sm text-gray-500">Total Revenue</p>
+              <h3 className="mt-2 text-2xl font-bold text-gray-900">
                 {formatCurrency(dashboard.totalRevenue)}
               </h3>
-              <p className="text-xs text-gray-500 mt-2">
-                From {dashboard.totalOrders} total orders
+              <p className="mt-2 text-xs text-gray-500">
+                Revenue from all orders
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
               <svg
-                className="w-6 h-6 text-blue-600"
+                className="h-6 w-6 text-emerald-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -255,27 +353,27 @@ export default function Page() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1m0-1a4.978 4.978 0 01-2.599-.73M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-5 border border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Orders</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-sm text-gray-500">Total Orders</p>
+              <h3 className="mt-2 text-2xl font-bold text-gray-900">
                 {dashboard.totalOrders}
               </h3>
-              <p className="text-xs text-gray-500 mt-2">
-                {dashboard.pendingOrders} pending / processing
+              <p className="mt-2 text-xs text-gray-500">
+                {dashboard.pendingOrders} still awaiting action
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100">
               <svg
-                className="w-6 h-6 text-green-600"
+                className="h-6 w-6 text-blue-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -284,56 +382,27 @@ export default function Page() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  d="M5 8h14M5 8a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2M5 8l1.4-3.2A2 2 0 018.24 3h7.52a2 2 0 011.84 1.2L19 8"
                 />
               </svg>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-5 border border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-600">Delivered Orders</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                {dashboard.deliveredOrders}
-              </h3>
-              <p className="text-xs text-gray-500 mt-2">
-                Completed fulfillment
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-5 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Customers</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="text-sm text-gray-500">Customers</p>
+              <h3 className="mt-2 text-2xl font-bold text-gray-900">
                 {dashboard.uniqueCustomers}
               </h3>
-              <p className="text-xs text-gray-500 mt-2">
-                Unique customers from orders
+              <p className="mt-2 text-xs text-gray-500">
+                Unique buyers recorded
               </p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100">
               <svg
-                className="w-6 h-6 text-orange-600"
+                className="h-6 w-6 text-orange-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -342,119 +411,386 @@ export default function Page() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  d="M17 20h5v-2a3 3 0 00-3-3h-2m0 5H7m10 0v-2c0-.7-.15-1.36-.42-1.96M7 20H2v-2a3 3 0 013-3h2m0 5v-2c0-.7.15-1.36.42-1.96m0 0A5 5 0 1116.58 16M15 7a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
             </div>
           </div>
         </div>
-      </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Avg. Order Value</p>
+              <h3 className="mt-2 text-2xl font-bold text-gray-900">
+                {formatCurrency(dashboard.averageOrderValue)}
+              </h3>
+              <p className="mt-2 text-xs text-gray-500">
+                Average spend per order
+              </p>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100">
+              <svg
+                className="h-6 w-6 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 11V6a1 1 0 112 0v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H6a1 1 0 110-2h5z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <DashboardActions />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
+      {/* Middle layout */}
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {/* Business summary */}
+        <div className="xl:col-span-2 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Business Summary
+              </h2>
+              <p className="text-sm text-gray-500">
+                Quick performance view of the store
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-2xl bg-green-50 p-4">
+              <p className="text-sm text-green-700">Delivered Orders</p>
+              <h3 className="mt-2 text-2xl font-bold text-green-900">
+                {dashboard.deliveredOrders}
+              </h3>
+              <p className="mt-2 text-xs text-green-700">
+                Fulfillment rate: {dashboard.fulfillmentRate}%
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-yellow-50 p-4">
+              <p className="text-sm text-yellow-700">Pending Orders</p>
+              <h3 className="mt-2 text-2xl font-bold text-yellow-900">
+                {dashboard.pendingOrders}
+              </h3>
+              <p className="mt-2 text-xs text-yellow-700">
+                Orders needing follow-up
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-blue-50 p-4">
+              <p className="text-sm text-blue-700">Paid Orders</p>
+              <h3 className="mt-2 text-2xl font-bold text-blue-900">
+                {dashboard.paidOrders}
+              </h3>
+              <p className="mt-2 text-xs text-blue-700">
+                Payment success rate: {dashboard.paymentRate}%
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <p className="text-sm font-medium text-gray-700">
+                Latest Order Activity
+              </p>
+              <h3 className="mt-2 text-base font-semibold text-gray-900">
+                {dashboard.latestOrder
+                  ? `#${dashboard.latestOrder.orderNumber || dashboard.latestOrder._id.slice(-6).toUpperCase()}`
+                  : "No orders yet"}
+              </h3>
+              <p className="mt-1 text-sm text-gray-600">
+                {dashboard.latestOrder
+                  ? `${getCustomerName(dashboard.latestOrder)} • ${formatCurrency(getOrderAmount(dashboard.latestOrder))}`
+                  : "Once orders come in, the latest activity will show here."}
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                {dashboard.latestOrder
+                  ? formatDate(dashboard.latestOrder.createdAt)
+                  : "Waiting for activity"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <p className="text-sm font-medium text-gray-700">
+                Store Focus Today
+              </p>
+              <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                <li>• Follow up pending orders quickly</li>
+                <li>• Confirm deliveries for completed sales</li>
+                <li>• Monitor payment completion and customer response</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick navigation */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Quick Navigation
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Fast access to daily tasks
+          </p>
+
+          <div className="mt-5 space-y-3">
+            <Link
+              href="/dashboard/orders"
+              className="flex cursor-pointer items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 transition hover:border-red-300 hover:bg-red-50"
+            >
+              <div>
+                <p className="font-medium text-gray-900">Manage Orders</p>
+                <p className="text-sm text-gray-500">
+                  Review and update customer orders
+                </p>
+              </div>
+              <span className="text-gray-400">→</span>
+            </Link>
+
+            <Link
+              href="/dashboard/products"
+              className="flex cursor-pointer items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 transition hover:border-red-300 hover:bg-red-50"
+            >
+              <div>
+                <p className="font-medium text-gray-900">Product Catalog</p>
+                <p className="text-sm text-gray-500">
+                  Add, edit, or update meat products
+                </p>
+              </div>
+              <span className="text-gray-400">→</span>
+            </Link>
+
+            <Link
+              href="/dashboard/#"
+              className="flex cursor-pointer items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 transition hover:border-red-300 hover:bg-red-50"
+            >
+              <div>
+                <p className="font-medium text-gray-900">Customers</p>
+                <p className="text-sm text-gray-500">
+                  View your customer base and contacts
+                </p>
+              </div>
+              <span className="text-gray-400">→</span>
+            </Link>
+
+            <Link
+              href="/dashboard/settings"
+              className="flex cursor-pointer items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 transition hover:border-red-300 hover:bg-red-50"
+            >
+              <div>
+                <p className="font-medium text-gray-900">Store Settings</p>
+                <p className="text-sm text-gray-500">
+                  Update business information and preferences
+                </p>
+              </div>
+              <span className="text-gray-400">→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Recent orders */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
             <h2 className="text-lg font-semibold text-gray-900">
               Recent Orders
             </h2>
-            <Link
-              href="/dashboard/orders"
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              View all
-            </Link>
+            <p className="text-sm text-gray-500">
+              Latest customer orders across the store
+            </p>
           </div>
 
+          <Link
+            href="/dashboard/orders"
+            className="cursor-pointer text-sm font-medium text-red-600 transition hover:text-red-700"
+          >
+            View all
+          </Link>
+        </div>
+
+        {dashboard.recentOrders.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
+            <p className="text-sm text-gray-500">No orders found yet.</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="min-w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left text-xs font-medium text-gray-600 pb-3">
-                    Order ID
+                  <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Order
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-600 pb-3">
+                  <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Customer
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-600 pb-3">
-                    Product
+                  <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Items
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-600 pb-3">
+                  <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Amount
                   </th>
-                  <th className="text-left text-xs font-medium text-gray-600 pb-3">
+                  <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Date
+                  </th>
+                  <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Status
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {dashboard.recentOrders.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-6 text-sm text-center text-gray-500"
-                    >
-                      No orders found
+                {dashboard.recentOrders.map((order) => (
+                  <tr
+                    key={order._id}
+                    className="transition hover:bg-gray-50 cursor-pointer"
+                  >
+                    <td className="py-4 text-sm font-medium text-gray-900">
+                      #{order.orderNumber || order._id.slice(-6).toUpperCase()}
+                    </td>
+                    <td className="py-4 text-sm text-gray-700">
+                      {getCustomerName(order)}
+                    </td>
+                    <td className="py-4 text-sm text-gray-600">
+                      {getOrderProduct(order)}
+                    </td>
+                    <td className="py-4 text-sm font-medium text-gray-900">
+                      {formatCurrency(getOrderAmount(order))}
+                    </td>
+                    <td className="py-4 text-sm text-gray-500">
+                      {formatDate(order.createdAt)}
+                    </td>
+                    <td className="py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusClasses(getOrderStatus(order))}`}
+                      >
+                        {getOrderStatus(order)}
+                      </span>
                     </td>
                   </tr>
-                ) : (
-                  dashboard.recentOrders.map((order) => (
-                    <tr key={order._id}>
-                      <td className="py-3 text-sm text-gray-900">
-                        #
-                        {order.orderNumber || order._id.slice(-6).toUpperCase()}
-                      </td>
-                      <td className="py-3 text-sm text-gray-900">
-                        {getCustomerName(order)}
-                      </td>
-                      <td className="py-3 text-sm text-gray-600">
-                        {getOrderProduct(order)}
-                      </td>
-                      <td className="py-3 text-sm text-gray-900">
-                        {formatCurrency(getOrderAmount(order))}
-                      </td>
-                      <td className="py-3">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClasses(order.status)}`}
-                        >
-                          {order.status || "Unknown"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      {/* Bottom cards */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">Order Health</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Snapshot of current order flow
+          </p>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-gray-600">Delivered</span>
+                <span className="font-medium text-gray-900">
+                  {dashboard.deliveredOrders}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-gray-100">
+                <div
+                  className="h-2 rounded-full bg-green-500"
+                  style={{
+                    width: `${dashboard.fulfillmentRate}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-gray-600">Pending</span>
+                <span className="font-medium text-gray-900">
+                  {dashboard.pendingOrders}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-gray-100">
+                <div
+                  className="h-2 rounded-full bg-yellow-500"
+                  style={{
+                    width:
+                      dashboard.totalOrders > 0
+                        ? `${Math.round(
+                            (dashboard.pendingOrders / dashboard.totalOrders) *
+                              100,
+                          )}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-gray-600">Cancelled / Failed</span>
+                <span className="font-medium text-gray-900">
+                  {dashboard.cancelledOrders}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-gray-100">
+                <div
+                  className="h-2 rounded-full bg-red-500"
+                  style={{
+                    width:
+                      dashboard.totalOrders > 0
+                        ? `${Math.round(
+                            (dashboard.cancelledOrders /
+                              dashboard.totalOrders) *
+                              100,
+                          )}%`
+                        : "0%",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Top Selling</h2>
-          </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Small Business Notes
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Useful reminders for a new meat store
+          </p>
 
-          <div className="space-y-4">
-            {dashboard.topProducts.length === 0 ? (
-              <p className="text-sm text-gray-500">No product sales yet</p>
-            ) : (
-              dashboard.topProducts.map((product) => (
-                <div key={product.name} className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-200 rounded-lg" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {product.name}
-                    </p>
-                    <p className="text-xs text-gray-600">{product.sold} sold</p>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {formatCurrency(product.revenue)}
-                  </p>
-                </div>
-              ))
-            )}
+          <div className="mt-5 grid gap-3">
+            <div className="rounded-2xl bg-gray-50 p-4">
+              <p className="font-medium text-gray-900">Keep orders moving</p>
+              <p className="mt-1 text-sm text-gray-600">
+                Pending orders should be confirmed quickly to avoid losing
+                customers.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-gray-50 p-4">
+              <p className="font-medium text-gray-900">Watch average basket</p>
+              <p className="mt-1 text-sm text-gray-600">
+                Use bundles and family packs to grow average order value.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-gray-50 p-4">
+              <p className="font-medium text-gray-900">Retain repeat buyers</p>
+              <p className="mt-1 text-sm text-gray-600">
+                Returning customers are important for a new store, so follow up
+                after delivery.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

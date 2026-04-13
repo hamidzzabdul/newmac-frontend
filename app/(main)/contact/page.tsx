@@ -13,6 +13,9 @@ import {
 import { FaTiktok } from "react-icons/fa6";
 import { IoSend } from "react-icons/io5";
 
+import { sendContactMessage } from "@/lib/api/contact";
+import toast from "react-hot-toast";
+
 function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -34,14 +37,22 @@ function ContactPage() {
       [e.target.name]: e.target.value,
     });
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitSuccess(false);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    const loadingToast = toast.loading("Sending message...");
+
+    try {
+      await sendContactMessage(formData);
+
+      toast.success("Message sent successfully!", {
+        id: loadingToast,
+      });
+
       setSubmitSuccess(true);
+
       setFormData({
         name: "",
         email: "",
@@ -53,13 +64,19 @@ function ContactPage() {
       setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
-    }, 1500);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send message", {
+        id: loadingToast,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-red-50">
       {/* Hero Section with Curve */}
-      <div className="relative bg-gradient-to-r from-red-600 to-red-700 text-white pb-32 pt-16 overflow-hidden">
+      <div className="relative bg-linear-to-r from-red-600 to-red-700 text-white pb-32 pt-16 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
@@ -94,7 +111,7 @@ function ContactPage() {
         {/* Contact Cards - Floating Style */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
           <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer">
-            <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="w-16 h-16 bg-linear-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
               <FaPhone className="text-white text-2xl" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">Call Us</h3>
@@ -102,10 +119,10 @@ function ContactPage() {
               Mon-Sat: 7:00 AM - 8:00 PM
             </p>
             <a
-              href="tel:+254700000000"
+              href="tel:+254701347191"
               className="text-red-600 font-semibold hover:text-red-700 cursor-pointer inline-flex items-center gap-2 group"
             >
-              +254 700 000 000
+              +254 701 347 191
               <span className="group-hover:translate-x-1 transition-transform">
                 →
               </span>
@@ -113,7 +130,7 @@ function ContactPage() {
           </div>
 
           <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer">
-            <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="w-16 h-16 bg-linear-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
               <FaEnvelope className="text-white text-2xl" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">Email Us</h3>
@@ -121,10 +138,11 @@ function ContactPage() {
               Response within 24 hours
             </p>
             <a
-              href="mailto:info@NewMark.com"
+              href="mailto:  info@newmarkprimemeat.com
+"
               className="text-red-600 font-semibold hover:text-red-700 cursor-pointer inline-flex items-center gap-2 group"
             >
-              info@newmark.com
+              info@newmarkprimemeat.com
               <span className="group-hover:translate-x-1 transition-transform">
                 →
               </span>
@@ -132,7 +150,7 @@ function ContactPage() {
           </div>
 
           <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer">
-            <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+            <div className="w-16 h-16 bg-linear-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
               <FaMapMarkerAlt className="text-white text-2xl" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">Visit Us</h3>
@@ -153,7 +171,7 @@ function ContactPage() {
               </p>
 
               {submitSuccess && (
-                <div className="mb-8 p-5 bg-gradient-to-r from-green-50 to-green-100 rounded-2xl border-l-4 border-green-500">
+                <div className="mb-8 p-5 bg-linear-to-r from-green-50 to-green-100 rounded-2xl border-l-4 border-green-500">
                   <p className="font-semibold text-green-800 mb-1">
                     Message sent successfully! 🎉
                   </p>
@@ -270,7 +288,7 @@ function ContactPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold py-4 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-linear-to-r from-red-600 to-red-700 text-white font-semibold py-4 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -303,11 +321,11 @@ function ContactPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-3 border-b border-gray-100">
                   <span className="text-gray-700 font-medium">Mon - Fri</span>
-                  <span className="text-gray-900 font-semibold">7AM - 8PM</span>
+                  <span className="text-gray-900 font-semibold">7AM - 6PM</span>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-gray-100">
                   <span className="text-gray-700 font-medium">Saturday</span>
-                  <span className="text-gray-900 font-semibold">8AM - 6PM</span>
+                  <span className="text-gray-900 font-semibold">8AM - 2PM</span>
                 </div>
                 <div className="flex justify-between items-center py-3">
                   <span className="text-gray-700 font-medium">Sunday</span>
@@ -317,14 +335,14 @@ function ContactPage() {
             </div>
 
             {/* Social Media Card */}
-            <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-3xl p-8 shadow-lg text-white">
+            <div className="bg-linear-to-br from-red-600 to-red-700 rounded-3xl p-8 shadow-lg text-white">
               <h3 className="text-xl font-bold mb-3">Connect With Us</h3>
               <p className="text-red-100 mb-6 text-sm">
                 Follow us for updates, recipes, and special offers.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href="https://wa.me/254700000000"
+                  href="https://wa.me/254700876201"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-4 bg-white/20 hover:bg-white/30 rounded-2xl transition-all cursor-pointer backdrop-blur-sm"
@@ -371,11 +389,19 @@ function ContactPage() {
                 Call us for immediate assistance with orders or delivery.
               </p>
               <a
-                href="tel:+254700000000"
+                href="tel:+254700876201"
                 className="flex items-center justify-center gap-2 px-6 py-4 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors cursor-pointer"
               >
                 <FaPhone className="text-lg" />
-                +254 700 000 000
+                0700 876 201
+              </a>
+              <br />
+              <a
+                href="tel:+254701347191"
+                className="flex items-center justify-center gap-2 px-6 py-4 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                <FaPhone className="text-lg" />
+                0701 347 191
               </a>
             </div>
           </div>

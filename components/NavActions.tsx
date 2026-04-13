@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaRegUser } from "react-icons/fa6";
 import { User, ShoppingBag, LogOut, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { IoBagOutline, IoSearchOutline } from "react-icons/io5";
+import { IoBagOutline } from "react-icons/io5";
 import { useAppSelector } from "@/app/store/hook";
 import toast from "react-hot-toast";
 import AuthModal from "./AuthModal";
@@ -13,10 +13,20 @@ import { useAuth } from "@/hooks/UseAuth";
 function NavActions() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [cartBump, setCartBump] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
 
-  const { user, isSignedIn, login, logout, loading } = useAuth(); // 👈 loading added
+  const { user, isSignedIn, login, logout, loading } = useAuth();
   const cartItems = useAppSelector((state) => state.cart.items);
+  const prevCartCount = useRef(cartItems.length);
+
+  useEffect(() => {
+    if (cartItems.length > prevCartCount.current) {
+      setCartBump(true);
+      setTimeout(() => setCartBump(false), 450);
+    }
+    prevCartCount.current = cartItems.length;
+  }, [cartItems.length]);
 
   const handleSignOut = () => {
     logout();
@@ -31,7 +41,6 @@ function NavActions() {
 
   return (
     <>
-      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -44,21 +53,31 @@ function NavActions() {
         }}
       />
 
-      <div className="flex items-center gap-4">
-        {/* User Icon + Dropdown */}
-        <div className="relative flex items-center flex-col gap-2">
-          {!loading && isSignedIn ? ( // 👈 wait for localStorage to load
+      <div className="flex items-center gap-3">
+        {/* ─── User Area ─── */}
+        <div className="relative flex items-center">
+          {!loading && isSignedIn ? (
+            /* ── Logged-in pill ── */
             <>
               <button
                 onMouseEnter={() => setDropdownOpen(true)}
-                className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+                className="hidden sm:flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all duration-200 cursor-pointer group"
               >
-                <FaRegUser
-                  className="text-gray-700 hover:text-red-600 transition-colors"
-                  size={20}
-                />
+                {/* Avatar circle */}
+                <div className="relative w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {user?.fullName?.charAt(0).toUpperCase() ?? (
+                    <User size={14} />
+                  )}
+                  {/* Green online dot */}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
+                </div>
+                {/* First name */}
+                <span className="text-sm font-semibold text-gray-700 group-hover:text-red-600 transition-colors max-w-20 truncate">
+                  {user?.fullName?.split(" ")[0]}
+                </span>
               </button>
 
+              {/* Dropdown */}
               {dropdownOpen && (
                 <div
                   onMouseEnter={() => setDropdownOpen(true)}
@@ -72,8 +91,11 @@ function NavActions() {
                   {/* User header */}
                   <div className="px-4 py-4 border-b border-gray-100 bg-linear-to-r from-red-50 to-rose-100">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 bg-red-600 rounded-full flex items-center justify-center shadow-md shadow-red-200">
-                        <User className="text-white" size={20} />
+                      <div className="relative w-11 h-11 bg-red-600 rounded-full flex items-center justify-center shadow-md shadow-red-200 text-white font-bold text-lg">
+                        {user?.fullName?.charAt(0).toUpperCase() ?? (
+                          <User size={20} />
+                        )}
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-sm text-gray-900 truncate">
@@ -131,6 +153,7 @@ function NavActions() {
                         size={15}
                       />
                     </Link>
+
                     {user?.role === "admin" && (
                       <Link
                         href="/dashboard"
@@ -177,35 +200,41 @@ function NavActions() {
               )}
             </>
           ) : (
-            // 👇 Renders during loading AND when signed out — same element both times,
-            //    so SSR, loading state, and guest state all show the identical icon
-            <button
-              onClick={!loading ? () => openAuth("login") : undefined}
-              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <FaRegUser
-                className="text-gray-700 hover:text-red-600 transition-colors"
-                size={20}
-              />
-            </button>
+            /* ── Guest login/signup pill ── */
+            <div className="hidden sm:flex items-center gap-1 rounded-full border border-gray-200 overflow-hidden">
+              <button
+                onClick={!loading ? () => openAuth("login") : undefined}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:text-red-600 hover:bg-red-50 transition-all duration-150 cursor-pointer"
+              >
+                <FaRegUser size={14} />
+                Login
+              </button>
+              <span className="text-gray-300 text-sm select-none">|</span>
+              <button
+                onClick={!loading ? () => openAuth("register") : undefined}
+                className="flex items-center px-3 py-1.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-all duration-150 cursor-pointer"
+              >
+                Sign up
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Search */}
-
-        {/* Cart */}
+        {/* ─── Cart ─── */}
         <Link href="/cart">
           <button className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors cursor-pointer">
             <IoBagOutline
-              className="text-gray-700 hover:text-red-600 transition-colors"
+              className={`text-gray-700 hover:text-red-600 transition-colors ${cartBump ? "cart-bump" : ""}`}
               size={22}
             />
-            {!loading &&
-              cartItems.length > 0 && ( // 👈 gate badge on loading too
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md">
-                  {cartItems.length}
-                </span>
-              )}
+            {!loading && cartItems.length > 0 && (
+              <span
+                key={cartItems.length} // key change forces re-mount = re-animates badge
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md badge-pop"
+              >
+                {cartItems.length}
+              </span>
+            )}
           </button>
         </Link>
       </div>
@@ -220,6 +249,44 @@ function NavActions() {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
+        }
+        @keyframes cart-bump {
+          0% {
+            transform: scale(1) rotate(0deg);
+          }
+          25% {
+            transform: scale(1.3) rotate(-12deg);
+          }
+          50% {
+            transform: scale(1.2) rotate(10deg);
+          }
+          75% {
+            transform: scale(1.15) rotate(-6deg);
+          }
+          100% {
+            transform: scale(1) rotate(0deg);
+          }
+        }
+
+        @keyframes badge-pop {
+          0% {
+            transform: scale(0.5);
+            opacity: 0;
+          }
+          70% {
+            transform: scale(1.3);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .cart-bump {
+          animation: cart-bump 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+        }
+
+        .badge-pop {
+          animation: badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
       `}</style>
     </>

@@ -1,7 +1,9 @@
 import { Mail, MapPin } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { FaFacebookSquare, FaInstagramSquare } from "react-icons/fa";
 import { FaPhone, FaTiktok } from "react-icons/fa6";
+import Logo from "@/public/logo.jpeg";
 
 function Footer() {
   return (
@@ -13,8 +15,14 @@ function Footer() {
           <div className="flex flex-col gap-4">
             <div className="inline-block w-fit">
               <Link href="/">
-                <div className="bg-red-600 px-4 py-3 rounded-md hover:bg-red-700 transition-colors">
-                  <h1 className="text-2xl font-bold text-white">NewMark</h1>
+                <div className=" w-67.5 overflow-hidden">
+                  <Image
+                    src={Logo}
+                    alt="newmark logo"
+                    width={2000}
+                    height={2000}
+                    className="w-[90%] h-full"
+                  />
                 </div>
               </Link>
             </div>
@@ -31,15 +39,6 @@ function Footer() {
           <div className="flex flex-col gap-4">
             <h3 className="text-white text-lg font-bold">Quick Links</h3>
             <ul className="flex flex-col gap-3">
-              <li>
-                <Link
-                  href="/login"
-                  className="text-gray-400 hover:text-red-500 transition-colors text-sm flex items-center gap-2 group"
-                >
-                  <span className="w-0 h-0.5 bg-red-500 group-hover:w-4 transition-all duration-300"></span>
-                  Login / Register
-                </Link>
-              </li>
               <li>
                 <Link
                   href="/shop"
@@ -65,6 +64,15 @@ function Footer() {
                 >
                   <span className="w-0 h-0.5 bg-red-500 group-hover:w-4 transition-all duration-300"></span>
                   Order History
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/contact"
+                  className="text-gray-400 hover:text-red-500 transition-colors text-sm flex items-center gap-2 group"
+                >
+                  <span className="w-0 h-0.5 bg-red-500 group-hover:w-4 transition-all duration-300"></span>
+                  Contact us
                 </Link>
               </li>
             </ul>
@@ -94,7 +102,7 @@ function Footer() {
               </li>
               <li>
                 <Link
-                  href="/privacy"
+                  href="/privacy-policy"
                   className="text-gray-400 hover:text-red-500 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-0 h-0.5 bg-red-500 group-hover:w-4 transition-all duration-300"></span>
@@ -103,7 +111,7 @@ function Footer() {
               </li>
               <li>
                 <Link
-                  href="/terms"
+                  href="/terms-of-service"
                   className="text-gray-400 hover:text-red-500 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-0 h-0.5 bg-red-500 group-hover:w-4 transition-all duration-300"></span>
@@ -131,7 +139,7 @@ function Footer() {
               </a>
 
               <a
-                href="mailto:info@NewMark.co.ke"
+                href="mailto:info@newmarkprimemeat.com"
                 className="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors group"
               >
                 <div className="p-2 bg-gray-800 rounded-md group-hover:bg-red-600 transition-colors">
@@ -140,7 +148,7 @@ function Footer() {
                     className="text-red-500 group-hover:text-white"
                   />
                 </div>
-                <span className="text-sm">info@NewMark.co.ke</span>
+                <span className="text-sm">info@newmarkprimemeat.com</span>
               </a>
 
               <div className="flex items-center gap-3 text-gray-400">
@@ -189,16 +197,16 @@ function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-          <p>© 2025 NewMark. All Rights Reserved.</p>
+          <p>© {new Date().getFullYear()} NewMark. All Rights Reserved.</p>
           <div className="flex gap-6">
             <Link
-              href="/privacy"
+              href="/privacy-policy"
               className="hover:text-red-500 transition-colors"
             >
               Privacy
             </Link>
             <Link
-              href="/terms"
+              href="/terms-of-service"
               className="hover:text-red-500 transition-colors"
             >
               Terms

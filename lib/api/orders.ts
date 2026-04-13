@@ -1,4 +1,3 @@
-// import { auth } from "@clerk/nextjs/server";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -142,4 +141,18 @@ export async function initializePaystackPayment(orderId: string) {
 
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+}
+
+export async function downloadReceipt(orderId: string): Promise<Blob> {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/${orderId}/receipt`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.blob();
 }

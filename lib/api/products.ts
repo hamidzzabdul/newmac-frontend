@@ -57,10 +57,14 @@ export const createProduct = async (formData: FormData): Promise<Product> => {
   return response.json();
 };
 
-export const getAllProducts = async (): Promise<GetProductsResponse> => {
+export const getAllProducts = async (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sort?: string;
+}): Promise<GetProductsResponse> => {
   let token: string | null = null;
 
-  // ✅ Only access localStorage in browser
   if (typeof window !== "undefined") {
     token = localStorage.getItem("auth_token");
   }
@@ -73,9 +77,52 @@ export const getAllProducts = async (): Promise<GetProductsResponse> => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}/products`, {
-    headers,
-  });
+  const qs = new URLSearchParams();
+
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.search) qs.set("search", params.search);
+  if (params?.sort) qs.set("sort", params.sort);
+
+  const url = `${API_BASE_URL}/products${qs.toString() ? `?${qs.toString()}` : ""}`;
+
+  const res = await fetch(url, { headers });
+
+  if (!res.ok) throw new Error("Failed to fetch products");
+
+  return res.json();
+};
+
+export const getAllProductsHome = async (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sort?: string;
+}): Promise<GetProductsResponse> => {
+  let token: string | null = null;
+
+  if (typeof window !== "undefined") {
+    token = localStorage.getItem("auth_token");
+  }
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const qs = new URLSearchParams();
+
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.search) qs.set("search", params.search);
+  if (params?.sort) qs.set("sort", params.sort);
+
+  const url = `${API_BASE_URL}/products${qs.toString() ? `?${qs.toString()}` : ""}`;
+
+  const res = await fetch(url, { headers });
 
   if (!res.ok) throw new Error("Failed to fetch products");
 

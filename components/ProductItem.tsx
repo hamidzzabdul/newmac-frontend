@@ -25,7 +25,7 @@ const ProductItem = ({ product }: ProductProps) => {
         quantityKg: 1,
         image: imageSrc,
         category: product.category,
-      })
+      }),
     );
     toast.success(`${product.name} added to cart!`);
   };
@@ -69,7 +69,7 @@ const ProductItem = ({ product }: ProductProps) => {
                     e.preventDefault();
                     handleAddToCart();
                   }}
-                  className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white hover:bg-red-600 text-red-600 hover:text-white p-3 rounded-full shadow-lg active:scale-95"
+                  className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white hover:bg-red-600 text-red-600 hover:text-white p-3 rounded-full shadow-lg active:scale-95 cursor-pointer"
                 >
                   <ShoppingCart size={24} />
                 </button>
@@ -81,7 +81,7 @@ const ProductItem = ({ product }: ProductProps) => {
         {/* Content */}
         <div className="p-4">
           <Link href={`/shop/${product._id}`}>
-            <h3 className="text-base font-bold text-gray-900 line-clamp-2 leading-tight hover:text-red-600 transition-colors cursor-pointer min-h-[2.5rem]">
+            <h3 className="text-base font-bold text-gray-900 line-clamp-2 leading-tight hover:text-red-600 transition-colors cursor-pointer min-h-10">
               {product.name}
             </h3>
           </Link>
@@ -98,7 +98,7 @@ const ProductItem = ({ product }: ProductProps) => {
             <button
               disabled={!inStock}
               onClick={handleAddToCart}
-              className={`p-2.5 rounded-full transition-all duration-300 active:scale-95
+              className={`p-2.5 rounded-full transition-all duration-300 active:scale-95 cursor-pointer
                 ${
                   inStock
                     ? "bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg"

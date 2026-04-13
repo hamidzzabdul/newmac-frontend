@@ -8,6 +8,8 @@ import { FaBars, FaInstagram, FaSquareFacebook } from "react-icons/fa6";
 import { FaTiktok } from "react-icons/fa";
 import { IoSearchOutline, IoClose } from "react-icons/io5";
 import TopBar from "./TopBar";
+import Image from "next/image";
+import Logo from "@/public/logo.jpeg";
 
 function NavBar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,10 +35,19 @@ function NavBar() {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-red-600 flex items-center justify-center">
+              {/* <div className="w-10 h-10 bg-red-600 flex items-center justify-center">
                 <span className="text-white text-xl font-bold">N</span>
               </div>
-              <span className="text-2xl font-bold text-gray-900">NewMark</span>
+              <span className="text-2xl font-bold text-gray-900">NewMark</span> */}
+              <div className=" w-67.5 overflow-hidden">
+                <Image
+                  src={Logo}
+                  alt="newmark logo"
+                  width={2000}
+                  height={2000}
+                  className="w-[90%] h-full"
+                />
+              </div>
             </Link>
 
             {/* Desktop Menu */}

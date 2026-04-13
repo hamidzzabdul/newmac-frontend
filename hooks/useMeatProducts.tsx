@@ -26,9 +26,9 @@ export const useCreateProduct = () => {
 
 export const useGetAllProducts = () => {
   return useQuery<GetProductsResponse>({
-    queryKey: ["products"],
-    queryFn: getAllProducts, // ✅ now TS knows this returns Product[]
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ["products", { limit: 100 }],
+    queryFn: () => getAllProducts({ limit: 100 }),
+    staleTime: 5 * 60 * 1000,
   });
 };
 

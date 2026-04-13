@@ -31,6 +31,12 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  async patch(endpoint: string, body: any) {
+    return this.fetch(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
 
   async delete(endpoint: string) {
     return this.fetch(endpoint, { method: "DELETE" });
