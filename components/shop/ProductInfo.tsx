@@ -4,7 +4,7 @@ import QuantitySelector from "./QuantitySelector";
 interface ProductInfoProps {
   product: Product;
   quantity: number;
-  setQuantity: (quantity: number) => void;
+  setQuantity: React.Dispatch<React.SetStateAction<number>>;
   addToCart: (product: Product, quantity: number) => void;
 }
 
@@ -21,16 +21,18 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         KSh {product.pricePerKg.toLocaleString()}
       </p>
       <p className="text-gray-600">Category: {product.category}</p>
+
       <div className="flex flex-col gap-1">
         <p className="text-xl font-bold">Description</p>
         <span className="text-gray-600">{product.description}</span>
       </div>
+
       <p
         className={`font-semibold ${
           product.stockkg > 0 ? "text-green-600" : "text-red-600"
         }`}
       >
-        {product.stockkg ? "In Stock" : "Out of Stock"}
+        {product.stockkg > 0 ? "In Stock" : "Out of Stock"}
       </p>
 
       <QuantitySelector quantity={quantity} setQuantity={setQuantity} />

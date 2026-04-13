@@ -54,8 +54,6 @@ export default function AdminLayoutInner({
     return null;
   }
 
-  const initials = user?.name ? getInitials(user.name) : "A";
-
   return (
     <div className="h-screen flex overflow-hidden bg-[#F7F8FA]">
       <Toaster />

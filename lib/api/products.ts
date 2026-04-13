@@ -1,3 +1,5 @@
+import type { Product, ProductCategory } from "@/types/product";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -9,29 +11,10 @@ function getAuthToken(): string | null {
   }
 }
 
-// Types
-interface Product {
-  _id: string;
-  name: string;
-  description?: string;
-  category: string;
-  pricePerKg: number;
-  comparePrice?: number;
-  sku: string;
-  stockkg: number;
-  visibility?: string;
-  featured?: boolean;
-  onSale?: boolean;
-  allowBackorder?: boolean;
-  images?: string[];
-  isAvailable?: boolean;
-}
-
 export interface GetProductsResponse {
   docs: Product[];
   result: number;
 }
-
 // API Functions
 export const createProduct = async (formData: FormData): Promise<Product> => {
   const headers: HeadersInit = {};

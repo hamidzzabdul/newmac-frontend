@@ -1,8 +1,13 @@
-import { Product } from "@/types/product";
+import { Product, ProductCategory } from "@/types/product";
+
+type InventoryFormData = Partial<Product> & {
+  sku?: string;
+  category?: ProductCategory;
+};
 
 interface InventoryFormProps {
-  formData: Partial<Product>;
-  setFormData: React.Dispatch<React.SetStateAction<Partial<Product>>>;
+  formData: InventoryFormData;
+  setFormData: React.Dispatch<React.SetStateAction<InventoryFormData>>;
   onCancel: () => void;
   onSubmit: () => void;
   isEditMode: boolean;
@@ -52,15 +57,19 @@ export default function InventoryForm({
           <select
             value={formData.category || ""}
             onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
+              setFormData({
+                ...formData,
+                category: e.target.value as Product["category"],
+              })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select Category</option>
-            <option value="Beef">Beef</option>
-            <option value="Chicken">Chicken</option>
-            <option value="Pork">Pork</option>
-            <option value="Lamb">Lamb</option>
+            <option value="beef">Beef</option>
+            <option value="chicken">Chicken</option>
+            <option value="goat">Goat</option>
+            <option value="lamb">Lamb</option>
+            <option value="other">Other</option>
           </select>
         </div>
 

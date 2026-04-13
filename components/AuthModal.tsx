@@ -112,17 +112,19 @@ export default function AuthModal({
 
   useEffect(() => {
     if (resendCoolDown <= 0) return;
+
     const timer = setInterval(() => {
       setResendCoolDown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           return 0;
         }
+        return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  });
+  }, [resendCoolDown]);
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),

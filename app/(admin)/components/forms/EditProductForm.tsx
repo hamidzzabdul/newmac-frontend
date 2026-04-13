@@ -15,15 +15,12 @@ import { X } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Product } from "@/types/product";
-import { useRouter } from "next/navigation";
 
 interface EditProductFormProps {
   product: Product;
 }
 
 function EditProductForm({ product }: EditProductFormProps) {
-  const router = useRouter();
-
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,7 +78,7 @@ function EditProductForm({ product }: EditProductFormProps) {
     }
   };
 
-  const onSubmit = async (data: CreateProductInput) => {
+  const onSubmit = async (data: UpdateProductInput) => {
     setIsSubmitting(true);
 
     const formData = new FormData();
@@ -132,7 +129,7 @@ function EditProductForm({ product }: EditProductFormProps) {
     const cleanPath = imagePath.startsWith("uploads/")
       ? imagePath.substring(8)
       : imagePath;
-    return `http://localhost:5000/uploads/${cleanPath}`;
+    return `${process.env.NEXT_PUBLIC_API_URL}/uploads/${cleanPath}`;
   };
   const onError = (errors: any) => {
     console.log("FORM ERRORS:", errors);

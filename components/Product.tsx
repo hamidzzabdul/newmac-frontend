@@ -7,7 +7,6 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation } from "swiper/modules";
 import type { Product as ProductType } from "@/types/product";
 
-// Import Swiper styles
 import "swiper/css";
 import "swiper/css/navigation";
 
@@ -20,17 +19,9 @@ type ProductProps = {
 };
 
 function Product({ category, products }: ProductProps) {
-  const filteredProducts = products.filter((product) => {
-    const productCategory =
-      typeof product.category === "string"
-        ? product.category
-        : (product.category as { name?: string })?.name || "";
-
-    return (
-      productCategory.trim().toLowerCase() ===
-      category.name.trim().toLowerCase()
-    );
-  });
+  const filteredProducts = products.filter(
+    (product) => product.category === category.name.toLowerCase(),
+  );
 
   if (!filteredProducts.length) return null;
 

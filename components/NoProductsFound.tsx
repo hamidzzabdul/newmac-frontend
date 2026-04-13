@@ -1,6 +1,10 @@
 import { Search } from "lucide-react";
 
-const NoProductsFound = ({ clearFilters }) => (
+interface NoProductsFoundProps {
+  clearFilters: () => void;
+}
+
+const NoProductsFound = ({ clearFilters }: NoProductsFoundProps) => (
   <div className="text-center py-16">
     <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
       <Search size={40} className="text-gray-400" />

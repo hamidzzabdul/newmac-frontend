@@ -1,6 +1,6 @@
 import Hero from "@/components/homepage/Hero";
 import Product from "@/components/Product";
-import { getAllProducts, getAllProductsHome } from "@/lib/api/products";
+import { getAllProductsHome } from "@/lib/api/products";
 import { Truck, Shield, Award, Clock } from "lucide-react";
 import OrderingProcess from "@/components/orderingProcess";
 import { Metadata } from "next";

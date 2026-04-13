@@ -1,5 +1,25 @@
 import { X } from "lucide-react";
 
+interface PriceRange {
+  label: string;
+  min?: number;
+  max?: number;
+}
+
+interface MobileFiltersDrawerProps {
+  showFilters: boolean;
+  setShowFilters: React.Dispatch<React.SetStateAction<boolean>>;
+  categories: string[];
+  selectedCategory: string;
+  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
+  priceRanges: PriceRange[];
+  selectedPriceRange: number | null;
+  setSelectedPriceRange: React.Dispatch<React.SetStateAction<number | null>>;
+  showInStock: boolean;
+  setShowInStock: React.Dispatch<React.SetStateAction<boolean>>;
+  clearFilters: () => void;
+}
+
 const MobileFiltersDrawer = ({
   showFilters,
   setShowFilters,
@@ -12,7 +32,7 @@ const MobileFiltersDrawer = ({
   showInStock,
   setShowInStock,
   clearFilters,
-}) => {
+}: MobileFiltersDrawerProps) => {
   if (!showFilters) return null;
 
   return (
@@ -27,7 +47,6 @@ const MobileFiltersDrawer = ({
           </div>
 
           <div className="space-y-6">
-            {/* Categories */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Category
@@ -49,7 +68,6 @@ const MobileFiltersDrawer = ({
               </div>
             </div>
 
-            {/* Price Range */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Price Range
@@ -71,7 +89,6 @@ const MobileFiltersDrawer = ({
               </div>
             </div>
 
-            {/* In Stock */}
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"

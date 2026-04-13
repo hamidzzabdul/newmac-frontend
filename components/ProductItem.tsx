@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import type { Product as ProductType } from "@/types/product";
 import { getImageUrl } from "@/utils/image";
+import { productUrl } from "@/utils/slugs";
 
 type ProductProps = {
   product: ProductType;
