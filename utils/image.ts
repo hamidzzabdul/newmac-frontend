@@ -3,5 +3,5 @@ export const getImageUrl = (imagePath: string) => {
   const cleanPath = imagePath.startsWith("uploads/")
     ? imagePath.substring(8)
     : imagePath;
-  return `http://localhost:5000/uploads/${cleanPath}`;
+  return `${process.env.NEXT_PUBLIC_API_URL}/uploads/${cleanPath}`;
 };

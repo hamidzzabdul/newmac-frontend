@@ -6,9 +6,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "http",
-        hostname: "localhost",
+        hostname: "31.97.223.209",
         port: "5000", // specify the port of your backend
-        pathname: "/uploads/**",
+        pathname: "/api/v1/uploads/**",
       },
     ],
   },
