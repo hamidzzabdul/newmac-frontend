@@ -180,15 +180,22 @@ export const updateProductInventory = async ({
   return response.json();
 };
 
-export const deleteProduct = async (id: string): Promise<Product> => {
+export const deleteProduct = async (id: string) => {
+  const token = getAuthToken();
+
   const response = await fetch(`${API_BASE_URL}/products/${id}`, {
     method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to delete product");
+    throw new Error(data.message || "Failed to delete product");
   }
 
-  return response.json();
+  return data;
 };
