@@ -5,7 +5,6 @@ interface ProductClientProps {
 }
 const RelatedProducts = ({ products }: ProductClientProps) => {
   if (!products.length) return null;
-  console.log(products);
   return (
     <div className="mt-12">
       <h2 className="text-2xl font-bold mb-6">Related Products</h2>
