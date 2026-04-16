@@ -113,7 +113,8 @@ export const getAllProductsHome = async (params?: {
 };
 
 export const getProductById = async (slug: string): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/products/${slug}`);
+  const response = await fetch(`${API_BASE_URL}/products/slug/${slug}`);
+  console.log(response);
   if (!response.ok) {
     if (!response.ok) {
       const text = await response.text();
