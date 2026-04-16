@@ -11,6 +11,7 @@ export interface Product {
   images: string[];
   stockkg: number;
   sku: string;
+  slug: string;
   visibility?: ProductVisibility;
   featured?: boolean;
   onSale?: boolean;

@@ -35,7 +35,7 @@ const ProductItem = ({ product }: ProductProps) => {
     <div className="w-full group  md:h-80 overflow-hidden">
       <div className="w-full overflow-hidden bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
         {/* Image */}
-        <Link href={`/shop/${product._id}`}>
+        <Link href={`/shop/${product.slug}`}>
           <div className="relative w-full h-100 md:h-48  overflow-hidden cursor-pointer">
             {/* Image layer */}
             <Image
@@ -81,7 +81,7 @@ const ProductItem = ({ product }: ProductProps) => {
 
         {/* Content */}
         <div className="p-4">
-          <Link href={`/shop/${product._id}`}>
+          <Link href={`/shop/${product.slug}`}>
             <h3 className="text-base font-bold text-gray-900 line-clamp-2 leading-tight hover:text-red-600 transition-colors cursor-pointer min-h-10">
               {product.name}
             </h3>

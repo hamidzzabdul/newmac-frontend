@@ -112,8 +112,8 @@ export const getAllProductsHome = async (params?: {
   return res.json();
 };
 
-export const getProductById = async (id: string): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/products/${id}`);
+export const getProductById = async (slug: string): Promise<Product> => {
+  const response = await fetch(`${API_BASE_URL}/products/${slug}`);
   if (!response.ok) {
     throw new Error("Failed to fetch product");
   }
