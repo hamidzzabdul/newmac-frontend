@@ -1,16 +1,16 @@
-import { getAllProducts, getProductById } from "@/lib/api/products";
+import { getAllProducts, getProductBySlug } from "@/lib/api/products";
 import ProductClient from "./ProductClient";
 
 interface PageProps {
-  params: Promise<{ id: string }>; // Notice Promise here
+  params: Promise<{ slug: string }>;
 }
 
 export default async function ProductPage({ params }: PageProps) {
-  const { id } = await params; // ✅ unwrap the promise
+  const { slug } = await params;
 
-  const product = await getProductById(id);
+  const product = await getProductBySlug(slug);
 
-  const allProducts = await getAllProducts(); // returns { docs: Product[] }
+  const allProducts = await getAllProducts();
 
   if (!product) {
     return <p className="text-center py-20">Product not found</p>;
@@ -18,7 +18,7 @@ export default async function ProductPage({ params }: PageProps) {
 
   const relatedProducts = allProducts.docs
     .filter((p) => p.category === product.category && p._id !== product._id)
-    .slice(0, 4); // optional: limit to 4
+    .slice(0, 4);
 
   return <ProductClient product={product} relatedProducts={relatedProducts} />;
 }

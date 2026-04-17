@@ -128,7 +128,6 @@ function SettingsPage() {
       });
 
       const fetchedUsers = res?.docs || [];
-      // console.log(res.);
       const pagination = res?.pagination || {};
 
       setUsers(fetchedUsers);

@@ -46,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (u: AuthUser) => {
     setUser(u);
-    console.log("Logging in user:", u); // Debugging log
 
     localStorage.setItem("auth_user", JSON.stringify(u));
 

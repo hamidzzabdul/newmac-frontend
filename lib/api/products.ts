@@ -33,7 +33,6 @@ export const createProduct = async (formData: FormData): Promise<Product> => {
 
   if (!response.ok) {
     const error = await response.json();
-    console.log(error);
     throw new Error(error.message || "Failed to create product");
   }
 
@@ -112,9 +111,20 @@ export const getAllProductsHome = async (params?: {
   return res.json();
 };
 
-export const getProductById = async (slug: string): Promise<Product> => {
+export const getProductById = async (id: string): Promise<Product> => {
+  const response = await fetch(`${API_BASE_URL}/products/${id}`);
+  if (!response.ok) {
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to fetch product: ${response.status} ${text}`);
+    }
+  }
+
+  return response.json();
+};
+
+export const getProductBySlug = async (slug: string): Promise<Product> => {
   const response = await fetch(`${API_BASE_URL}/products/slug/${slug}`);
-  console.log(response);
   if (!response.ok) {
     if (!response.ok) {
       const text = await response.text();

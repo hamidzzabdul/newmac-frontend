@@ -73,17 +73,14 @@ const MyOrders = () => {
   const router = useRouter();
 
   const fetchOrders = async () => {
-    console.log("Fetching orders...");
     try {
       setLoading(true);
       setError(null);
 
       // Add this temporarily to debug
       const token = localStorage.getItem("auth_token");
-      console.log("Token:", token);
 
       const res = await getMyOrders();
-      console.log("Orders response:", res);
       setOrders(res.data.orders);
     } catch (err: any) {
       console.error("Full error:", err);
@@ -170,9 +167,7 @@ const MyOrders = () => {
     try {
       setDownloadingOrderId(orderId);
 
-      console.log("Downloading receipt for:", orderId); // 👈
       const blob = await downloadReceipt(orderId);
-      console.log("Blob received:", blob.type, blob.size); // 👈
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

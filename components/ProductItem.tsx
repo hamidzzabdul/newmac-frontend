@@ -7,7 +7,6 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import type { Product as ProductType } from "@/types/product";
 import { getImageUrl } from "@/utils/image";
-import { productUrl } from "@/utils/slugs";
 
 type ProductProps = {
   product: ProductType;
@@ -30,7 +29,6 @@ const ProductItem = ({ product }: ProductProps) => {
     );
     toast.success(`${product.name} added to cart!`);
   };
-
   return (
     <div className="w-full group  md:h-80 overflow-hidden">
       <div className="w-full overflow-hidden bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">

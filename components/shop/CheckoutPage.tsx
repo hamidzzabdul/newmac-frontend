@@ -683,7 +683,6 @@ const CheckoutPage = () => {
                       if (clicked) return;
                       setClicked(true);
                       handleSubmit(onSubmit, (errs) => {
-                        console.log("VALIDATION ERRORS:", errs);
                         setClicked(false);
                       })();
                       setTimeout(() => setClicked(false), 4000);

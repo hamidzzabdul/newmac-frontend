@@ -176,7 +176,6 @@ export default function Page() {
         setError(null);
 
         const response = await getAdminOrders();
-        console.log("dashboard response:", response);
 
         const normalizedOrders: Order[] = Array.isArray(response)
           ? response
