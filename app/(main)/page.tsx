@@ -185,15 +185,6 @@ export default async function Home() {
         {/* Ordering Process */}
         <section className="py-12 md:py-16 bg-white">
           <div className="md:w-[95%] max-w-350 mx-auto px-4">
-            <div className="text-center mb-8 md:mb-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-                How Ordering Works
-              </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Ordering from Newmark is simple, fast, and convenient from start
-                to delivery.
-              </p>
-            </div>
             <OrderingProcess />
           </div>
         </section>
@@ -289,7 +280,7 @@ export default async function Home() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="py-16 md:py-20 bg-linear-to-r from-red-600 to-red-700 text-white">
+        <section className="py-16 md:py-20 bg-gradient-to-r from-red-600 to-red-700 text-white">
           <div className="md:w-[95%] max-w-350 mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">
               Ready to Experience Premium Quality?
