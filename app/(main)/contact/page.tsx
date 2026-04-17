@@ -138,11 +138,11 @@ function ContactPage() {
               Response within 24 hours
             </p>
             <a
-              href="mailto:  info@newmarkprimemeat.com
+              href="mailto:  newmark.primecuts@gmail.com
 "
               className="text-red-600 font-semibold hover:text-red-700 cursor-pointer inline-flex items-center gap-2 group"
             >
-              info@newmarkprimemeat.com
+              newmark.primecuts@gmail.com
               <span className="group-hover:translate-x-1 transition-transform">
                 →
               </span>

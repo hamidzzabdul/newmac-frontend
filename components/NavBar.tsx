@@ -43,9 +43,9 @@ function NavBar() {
                 <Image
                   src={Logo}
                   alt="newmark logo"
-                  width={2000}
-                  height={2000}
-                  className="w-[90%] h-full"
+                  width={500}
+                  height={500}
+                  className="w-[50%] sm:w-[70%] md:w-[90%] h-full"
                 />
               </div>
             </Link>

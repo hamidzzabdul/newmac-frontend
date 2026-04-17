@@ -135,11 +135,11 @@ function Footer() {
                     className="text-red-500 group-hover:text-white"
                   />
                 </div>
-                <span className="text-sm">+254 706 328 544</span>
+                <span className="text-sm">+254 700 876 201</span>
               </a>
 
               <a
-                href="mailto:info@newmarkprimemeat.com"
+                href="mailto:newmark.primecuts@gmail.com"
                 className="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors group"
               >
                 <div className="p-2 bg-gray-800 rounded-md group-hover:bg-red-600 transition-colors">
@@ -148,14 +148,16 @@ function Footer() {
                     className="text-red-500 group-hover:text-white"
                   />
                 </div>
-                <span className="text-sm">info@newmarkprimemeat.com</span>
+                <span className="text-sm">newmark.primecut@gmail.com</span>
               </a>
 
               <div className="flex items-center gap-3 text-gray-400">
                 <div className="p-2 bg-gray-800 rounded-md">
                   <MapPin size={16} className="text-red-500" />
                 </div>
-                <span className="text-sm">Nairobi, Kenya</span>
+                <span className="text-sm">
+                  Nairobi, Kenya Bishan Plaza Westlands
+                </span>
               </div>
             </div>
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaRegUser } from "react-icons/fa6";
 import { User, ShoppingBag, LogOut, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { IoBagOutline } from "react-icons/io5";
+import { ShoppingCart } from "lucide-react";
 import { useAppSelector } from "@/app/store/hook";
 import toast from "react-hot-toast";
 import AuthModal from "./AuthModal";
@@ -223,7 +223,7 @@ function NavActions() {
         {/* ─── Cart ─── */}
         <Link href="/cart">
           <button className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors cursor-pointer">
-            <IoBagOutline
+            <ShoppingCart
               className={`text-gray-700 hover:text-red-600 transition-colors ${cartBump ? "cart-bump" : ""}`}
               size={22}
             />

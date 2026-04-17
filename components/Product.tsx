@@ -66,9 +66,9 @@ function Product({ category, products }: ProductProps) {
       <div className="w-full mt-3 relative">
         <Swiper
           modules={[Autoplay, Navigation]}
-          spaceBetween={20}
-          slidesPerView={1}
-          loop={filteredProducts.length > 1}
+          spaceBetween={12}
+          slidesPerView={2}
+          loop={filteredProducts.length > 2}
           speed={800}
           autoplay={{
             delay: 3000,
@@ -101,7 +101,7 @@ function Product({ category, products }: ProductProps) {
         >
           {filteredProducts.map((product) => (
             <SwiperSlide key={product._id} className="pb-2">
-              <div className="transition-transform duration-300 hover:-translate-y-1">
+              <div className="transition-transform duration-300 hover:-translate-y-1 cursor-pointer">
                 <ProductItem product={product} />
               </div>
             </SwiperSlide>

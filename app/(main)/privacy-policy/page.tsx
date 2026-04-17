@@ -170,10 +170,10 @@ const PrivacyPolicy = () => {
               <p className="text-sm text-gray-600">
                 Email:
                 <a
-                  href="mailto:info@newmarkprimemeat.com"
+                  href="mailto:newmark.primecuts@gmail.com"
                   className="text-red-600 hover:underline"
                 >
-                  info@newmarkprimemeat.com
+                  newmark.primecuts@gmail.com
                 </a>
               </p>
               <p className="text-sm text-gray-600">

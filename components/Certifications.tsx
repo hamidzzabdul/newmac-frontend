@@ -153,7 +153,7 @@ const Certifications = () => {
             about our certifications and quality standards.
           </p>
           <a
-            href="mailto:info@newmarkprimemeat.com"
+            href="mailto:newmark.primecuts@gmail.com"
             className="inline-block px-8 py-4 bg-white text-red-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             Contact Us for More Information
