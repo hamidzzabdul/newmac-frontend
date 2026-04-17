@@ -52,18 +52,9 @@ const jsonLd = {
 };
 
 const categories = [
-  {
-    id: 1,
-    name: "Beef",
-  },
-  {
-    id: 2,
-    name: "Goat",
-  },
-  {
-    id: 3,
-    name: "Lamb",
-  },
+  { id: 1, name: "Beef" },
+  { id: 2, name: "Goat" },
+  { id: 3, name: "Lamb" },
 ];
 
 const features = [
@@ -118,20 +109,55 @@ export default async function Home() {
         <Hero />
 
         {/* Promotional Banner */}
-        <div className="bg-linear-to-r from-red-600 to-red-700 text-white py-3 px-4">
-          <div className="bg-linear-to-r from-red-600 to-red-700 text-white  px-4">
-            <div className="md:w-[95%] max-w-350 mx-auto">
-              <p className="text-center text-sm md:text-base font-bold  ">
-                🥩 Premium Halal Meat Delivered Fresh Across Nairobi — Quality
-                You Can Trust
-              </p>
-            </div>
+        <section className="bg-red-600 text-white py-3 px-4">
+          <div className="md:w-[95%] max-w-350 mx-auto">
+            <p className="text-center text-sm md:text-base font-bold">
+              🥩 Premium Halal Meat Delivered Fresh Across Nairobi — Quality You
+              Can Trust
+            </p>
           </div>
-        </div>
+        </section>
+
+        {/* Products Section - moved up */}
+        <section className="md:w-[95%] max-w-350 mx-auto py-10 md:py-14">
+          <div className="text-center mb-8 md:mb-12 px-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              Shop Our Premium Selection
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Discover our carefully curated selection of premium halal meats,
+              sourced with care and delivered fresh to your doorstep.
+            </p>
+          </div>
+
+          {categories.map((cat) => (
+            <Product key={cat.id} category={cat} products={products} />
+          ))}
+
+          <div className="text-center mt-6 md:mt-8">
+            <Link
+              href="/shop"
+              className="inline-block bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors cursor-pointer"
+            >
+              View All Products
+            </Link>
+          </div>
+        </section>
 
         {/* Features Section */}
         <section className="py-12 md:py-16 bg-gray-50">
           <div className="md:w-[95%] max-w-350 mx-auto px-4">
+            <div className="text-center mb-8 md:mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                Why Customers Trust Newmark
+              </h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                We combine premium halal quality, dependable delivery, and
+                excellent customer care to give you the best shopping
+                experience.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
               {features.map((feature, index) => {
                 const Icon = feature.icon;
@@ -156,23 +182,21 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Products Section */}
-        <div className="md:w-[95%] max-w-350 mx-auto py-8 md:py-12">
-          <div className="text-center mb-8 md:mb-12 px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Our Premium Selection
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Discover our carefully curated selection of premium halal meats,
-              sourced from the finest suppliers and delivered fresh to your
-              door.
-            </p>
+        {/* Ordering Process */}
+        <section className="py-12 md:py-16 bg-white">
+          <div className="md:w-[95%] max-w-350 mx-auto px-4">
+            <div className="text-center mb-8 md:mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                How Ordering Works
+              </h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Ordering from Newmark is simple, fast, and convenient from start
+                to delivery.
+              </p>
+            </div>
+            <OrderingProcess />
           </div>
-
-          {categories.map((cat) => (
-            <Product key={cat.id} category={cat} products={products} />
-          ))}
-        </div>
+        </section>
 
         {/* Why Choose Us Section */}
         <section className="py-12 md:py-16 bg-linear-to-b from-gray-50 to-white">
@@ -186,7 +210,7 @@ export default async function Home() {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center p-6 cursor-pointer hover:transform hover:scale-105 transition-transform">
+              <div className="text-center p-6 cursor-pointer hover:scale-105 transition-transform">
                 <div className="text-5xl font-bold text-red-600 mb-3">100%</div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">
                   Halal Certified
@@ -197,7 +221,7 @@ export default async function Home() {
                 </p>
               </div>
 
-              <div className="text-center p-6 cursor-pointer hover:transform hover:scale-105 transition-transform">
+              <div className="text-center p-6 cursor-pointer hover:scale-105 transition-transform">
                 <div className="text-5xl font-bold text-red-600 mb-3">
                   5000+
                 </div>
@@ -210,7 +234,7 @@ export default async function Home() {
                 </p>
               </div>
 
-              <div className="text-center p-6 cursor-pointer hover:transform hover:scale-105 transition-transform">
+              <div className="text-center p-6 cursor-pointer hover:scale-105 transition-transform">
                 <div className="text-5xl font-bold text-red-600 mb-3">24/7</div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">
                   Customer Support
@@ -224,25 +248,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Call to Action Section */}
-        <section className="py-16 md:py-20 bg-gradient-to-r from-red-600 to-red-700 text-white">
-          <div className="md:w-[95%] max-w-350 mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">
-              Ready to Experience Premium Quality?
-            </h2>
-            <p className="text-lg md:text-xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Start shopping today and enjoy fresh, halal-certified meat
-              delivered right to your doorstep.
-            </p>
-            <Link
-              href="/shop"
-              className="inline-block bg-white text-red-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors cursor-pointer shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              Shop Now
-            </Link>
-          </div>
-        </section>
-
         {/* Testimonials Section */}
         <section className="py-12 md:py-16 bg-white">
           <div className="md:w-[95%] max-w-350 mx-auto px-4">
@@ -250,7 +255,7 @@ export default async function Home() {
               What Our Customers Say
             </h2>
             <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">
-              Don't just take our word for it - hear from our satisfied
+              Don&apos;t just take our word for it — hear from our satisfied
               customers.
             </p>
 
@@ -283,10 +288,26 @@ export default async function Home() {
           </div>
         </section>
 
-        <div className="md:w-[95%] max-w-350 mx-auto">
-          <OrderingProcess />
-        </div>
+        {/* Call to Action Section */}
+        <section className="py-16 md:py-20 bg-linear-to-r from-red-600 to-red-700 text-white">
+          <div className="md:w-[95%] max-w-350 mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">
+              Ready to Experience Premium Quality?
+            </h2>
+            <p className="text-lg md:text-xl mb-8 opacity-95 max-w-2xl mx-auto">
+              Start shopping today and enjoy fresh, halal-certified meat
+              delivered right to your doorstep.
+            </p>
+            <Link
+              href="/shop"
+              className="inline-block bg-white text-red-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors cursor-pointer shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              Shop Now
+            </Link>
+          </div>
+        </section>
       </main>
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
