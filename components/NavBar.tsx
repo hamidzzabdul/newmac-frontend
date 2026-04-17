@@ -59,14 +59,15 @@ function NavBar() {
       <nav className="w-full bg-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 lg:px-6">
           <div className="flex items-center justify-between h-20">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-67.5 overflow-hidden">
+            <Link href="/" className="flex items-center shrink-0">
+              <div className="w-32 sm:w-40 md:w-52 overflow-hidden shrink-0">
                 <Image
                   src={Logo}
                   alt="newmark logo"
                   width={500}
                   height={500}
-                  className="w-[50%] sm:w-[70%] md:w-[90%] h-full"
+                  className="w-full h-auto"
+                  priority
                 />
               </div>
             </Link>
@@ -106,21 +107,21 @@ function NavBar() {
               </li>
             </ul>
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden text-gray-700"
-                aria-label="Menu"
-              >
-                <FaBars size={24} />
-              </button>
-
+            <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <NavActions
                 onOpenAuth={(tab) => {
                   setAuthTab(tab);
                   setAuthModalOpen(true);
                 }}
               />
+
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="md:hidden text-gray-700 flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Menu"
+              >
+                <FaBars size={22} />
+              </button>
             </div>
           </div>
         </div>
@@ -142,7 +143,7 @@ function NavBar() {
               </div>
 
               {!loading && isSignedIn && user ? (
-                <div className="mb-6 rounded-2xl border border-red-100 bg-gradient-to-r from-red-50 to-rose-100 p-4">
+                <div className="mb-6 rounded-2xl border border-red-100 bg-linear-to-r from-red-50 to-rose-100 p-4">
                   <div className="flex items-center gap-3">
                     <div className="relative w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
                       {user.fullName?.charAt(0).toUpperCase() || "U"}
