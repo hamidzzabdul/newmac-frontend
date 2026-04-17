@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import NavActions from "./NavActions";
+import AuthModal from "./AuthModal";
 import { FaBars, FaInstagram, FaSquareFacebook } from "react-icons/fa6";
 import { FaTiktok } from "react-icons/fa";
-import { IoSearchOutline, IoClose } from "react-icons/io5";
+import { IoClose } from "react-icons/io5";
 import TopBar from "./TopBar";
 import Image from "next/image";
 import Logo from "@/public/logo.jpeg";
@@ -14,6 +15,11 @@ import Logo from "@/public/logo.jpeg";
 function NavBar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // 🔥 NEW: Auth modal state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
+
   const router = useRouter();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -26,6 +32,14 @@ function NavBar() {
 
   return (
     <>
+      {/* 🔥 Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultTab={authTab}
+        onLoginSuccess={() => setAuthModalOpen(false)}
+      />
+
       {/* Top Bar */}
       <TopBar />
 
@@ -35,11 +49,7 @@ function NavBar() {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              {/* <div className="w-10 h-10 bg-red-600 flex items-center justify-center">
-                <span className="text-white text-xl font-bold">N</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">NewMark</span> */}
-              <div className=" w-67.5 overflow-hidden">
+              <div className="w-67.5 overflow-hidden">
                 <Image
                   src={Logo}
                   alt="newmark logo"
@@ -95,7 +105,14 @@ function NavBar() {
               >
                 <FaBars size={24} />
               </button>
-              <NavActions />
+
+              {/* 🔥 Pass handler to NavActions */}
+              <NavActions
+                onOpenAuth={(tab) => {
+                  setAuthTab(tab);
+                  setAuthModalOpen(true);
+                }}
+              />
             </div>
           </div>
         </div>
@@ -147,24 +164,30 @@ function NavBar() {
                 </li>
                 <li>
                   <Link
-                    href="/contact-us"
+                    href="/contact"
                     onClick={() => setShowMobileMenu(false)}
                     className="block text-lg text-gray-700 hover:text-red-600 py-2"
                   >
                     Contact
                   </Link>
                 </li>
+
+                {/* 🔥 UPDATED: Auth instead of My Account */}
                 <li>
-                  <Link
-                    href="/account"
-                    onClick={() => setShowMobileMenu(false)}
-                    className="block text-lg text-gray-700 hover:text-red-600 py-2"
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setAuthTab("login");
+                      setAuthModalOpen(true);
+                    }}
+                    className="block text-lg text-gray-700 hover:text-red-600 py-2 text-left w-full"
                   >
-                    My Account
-                  </Link>
+                    Login / Sign Up
+                  </button>
                 </li>
               </ul>
 
+              {/* Socials */}
               <div className="mt-8 pt-8 border-t">
                 <div className="flex items-center gap-4">
                   <Link

@@ -10,7 +10,11 @@ import toast from "react-hot-toast";
 import AuthModal from "./AuthModal";
 import { useAuth } from "@/hooks/UseAuth";
 
-function NavActions() {
+type NavActionsProps = {
+  onOpenAuth?: (tab: "login" | "register") => void;
+};
+
+function NavActions({ onOpenAuth }: NavActionsProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [cartBump, setCartBump] = useState(false);
