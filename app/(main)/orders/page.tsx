@@ -607,7 +607,7 @@ const MyOrders = () => {
                 <button
                   onClick={() => {
                     setSelectedOrder(null);
-                    router.push(`/orders/track/${selectedOrder.orderNumber}`);
+                    router.push(`/orders/track/${selectedOrder._id}`);
                   }}
                   className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors cursor-pointer"
                 >

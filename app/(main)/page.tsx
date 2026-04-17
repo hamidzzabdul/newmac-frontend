@@ -3,6 +3,7 @@ import Product from "@/components/Product";
 import { getAllProductsHome } from "@/lib/api/products";
 import { Truck, Shield, Award, Clock } from "lucide-react";
 import OrderingProcess from "@/components/orderingProcess";
+import HomeProductsSection from "@/components/homepage/HomeProductsSection";
 import { Metadata } from "next";
 import Link from "next/link";
 
@@ -119,30 +120,7 @@ export default async function Home() {
         </section>
 
         {/* Products Section - moved up */}
-        <section className="md:w-[95%] max-w-350 mx-auto py-10 md:py-14">
-          <div className="text-center mb-8 md:mb-12 px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Shop Our Premium Selection
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Discover our carefully curated selection of premium halal meats,
-              sourced with care and delivered fresh to your doorstep.
-            </p>
-          </div>
-
-          {categories.map((cat) => (
-            <Product key={cat.id} category={cat} products={products} />
-          ))}
-
-          <div className="text-center mt-6 md:mt-8">
-            <Link
-              href="/shop"
-              className="inline-block bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors cursor-pointer"
-            >
-              View All Products
-            </Link>
-          </div>
-        </section>
+        <HomeProductsSection products={products} />
 
         {/* Features Section */}
         <section className="py-12 md:py-16 bg-gray-50">
@@ -280,7 +258,7 @@ export default async function Home() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="py-16 md:py-20 bg-gradient-to-r from-red-600 to-red-700 text-white">
+        <section className="py-16 md:py-20 bg-linear-to-r from-red-600 to-red-700 text-white">
           <div className="md:w-[95%] max-w-350 mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">
               Ready to Experience Premium Quality?

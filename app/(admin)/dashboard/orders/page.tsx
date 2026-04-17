@@ -1,86 +1,117 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getAdminOrders, updateOrderStatus } from "@/lib/api/orders";
 import { useRouter } from "next/navigation";
 import { Eye, Pencil, X } from "lucide-react";
+
+type OrderStatus =
+  | "pending_payment"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "ready_for_pickup"
+  | "delivered"
+  | "picked_up"
+  | "cancelled"
+  | "payment_failed";
+
+type PaymentMethod = "mpesa" | "card" | "cod";
+type FulfillmentMethod = "home_delivery" | "pickup";
 
 type Order = {
   _id: string;
   orderNumber: string;
   total: number;
-  orderStatus:
-    | "pending"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled"
-    | "confirmed";
+  orderStatus: OrderStatus;
   payment: {
-    method: "mpesa" | "card" | "cod";
+    method: PaymentMethod;
     status: string;
-    paidAt?: string; // ✅ added
   };
   createdAt: string;
   items: { name: string; quantity: number; price: number }[];
   customer: {
-    firstName: string;
-    lastName?: string;
-    email: string;
+    fullName: string;
     phone: string;
+    email?: string;
+  };
+  fulfillment?: {
+    method: FulfillmentMethod;
   };
 };
 
-// Statuses that are "done" — no editing allowed
-const LOCKED_STATUSES = ["confirmed", "delivered", "cancelled"];
+const LOCKED_STATUSES: OrderStatus[] = ["delivered", "picked_up", "cancelled"];
 
-// COD orders: you control the full flow manually
-const COD_STATUSES = [
-  "pending",
+const HOME_DELIVERY_STATUSES: OrderStatus[] = [
+  "pending_payment",
+  "confirmed",
   "processing",
   "shipped",
   "delivered",
   "cancelled",
+  "payment_failed",
 ];
 
-// Online paid orders: "confirmed" is set automatically by the payment callback,
-// so we skip "pending" and "confirmed" — you only move it forward from here
-const ONLINE_STATUSES = ["processing", "shipped", "delivered", "cancelled"];
+const PICKUP_STATUSES: OrderStatus[] = [
+  "pending_payment",
+  "confirmed",
+  "processing",
+  "ready_for_pickup",
+  "picked_up",
+  "cancelled",
+  "payment_failed",
+];
 
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  processing: "bg-blue-100 text-blue-700",
+const STATUS_STYLES: Record<OrderStatus, string> = {
+  pending_payment: "bg-yellow-100 text-yellow-700",
+  confirmed: "bg-blue-100 text-blue-700",
+  processing: "bg-indigo-100 text-indigo-700",
   shipped: "bg-purple-100 text-purple-700",
+  ready_for_pickup: "bg-cyan-100 text-cyan-700",
   delivered: "bg-green-100 text-green-700",
-  confirmed: "bg-green-100 text-green-700",
+  picked_up: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-red-100 text-red-700",
+  payment_failed: "bg-rose-100 text-rose-700",
 };
 
-const PAYMENT_STYLES: Record<string, string> = {
+const PAYMENT_STYLES: Record<PaymentMethod, string> = {
   mpesa: "bg-green-100 text-green-700",
   card: "bg-purple-100 text-purple-700",
-  cod: "bg-yellow-100 text-yellow-700",
+  cod: "bg-amber-100 text-amber-700",
 };
 
-const PAYMENT_LABELS: Record<string, string> = {
+const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   mpesa: "M-Pesa",
   card: "Card",
-  cod: "COD",
+  cod: "Pay on Delivery",
 };
 
-// Sort priority: pending first so you deal with urgent orders immediately
-const STATUS_PRIORITY: Record<string, number> = {
-  pending: 0,
-  processing: 1,
-  shipped: 2,
-  confirmed: 3,
-  delivered: 4,
-  cancelled: 5,
+const FULFILLMENT_STYLES: Record<FulfillmentMethod, string> = {
+  home_delivery: "bg-slate-100 text-slate-700",
+  pickup: "bg-orange-100 text-orange-700",
+};
+
+const STATUS_PRIORITY: Record<OrderStatus, number> = {
+  pending_payment: 0,
+  payment_failed: 1,
+  confirmed: 2,
+  processing: 3,
+  shipped: 4,
+  ready_for_pickup: 5,
+  delivered: 6,
+  picked_up: 7,
+  cancelled: 8,
 };
 
 const PAGE_SIZE = 10;
 
-type TabKey = "all" | "pending" | "cod" | "online";
+type TabKey =
+  | "all"
+  | "pending_payment"
+  | "home_delivery"
+  | "pickup"
+  | "cod"
+  | "online";
 
 function isToday(date: Date) {
   const now = new Date();
@@ -107,7 +138,10 @@ function isThisMonth(date: Date) {
   );
 }
 
-// ── Edit Status Modal ────────────────────────────────────────────────────────
+function formatStatusLabel(status: string) {
+  return status.replace(/_/g, " ");
+}
+
 function EditStatusModal({
   order,
   onClose,
@@ -115,27 +149,29 @@ function EditStatusModal({
 }: {
   order: Order;
   onClose: () => void;
-  onSave: (orderId: string, status: string) => Promise<void>;
+  onSave: (orderId: string, status: OrderStatus) => Promise<void>;
 }) {
-  const [selected, setSelected] = useState(order.orderStatus);
+  const [selected, setSelected] = useState<OrderStatus>(order.orderStatus);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isCod = order.payment.method === "cod";
-  const availableStatuses = isCod ? COD_STATUSES : ONLINE_STATUSES;
+  const isPickup = order.fulfillment?.method === "pickup";
+  const availableStatuses = isPickup ? PICKUP_STATUSES : HOME_DELIVERY_STATUSES;
 
   async function handleSave() {
     if (selected === order.orderStatus) {
       onClose();
       return;
     }
+
     setSaving(true);
     setError(null);
+
     try {
       await onSave(order._id, selected);
       onClose();
     } catch (err: any) {
-      setError(err.message ?? "Failed to update status");
+      setError(err?.message ?? "Failed to update status");
     } finally {
       setSaving(false);
     }
@@ -147,15 +183,14 @@ function EditStatusModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-5">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
               Edit Order Status
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Order #{order.orderNumber} &mdash;{" "}
-              <span className="font-medium">{order.customer.firstName}</span>
+              Order #{order.orderNumber} —{" "}
+              <span className="font-medium">{order.customer.fullName}</span>
             </p>
           </div>
           <button
@@ -167,9 +202,7 @@ function EditStatusModal({
         </div>
 
         <div className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-          {isCod
-            ? "Cash on delivery — you control the full order flow manually."
-            : 'Online payment — "confirmed" is set automatically when payment succeeds. Move the order forward from here.'}
+          {isPickup ? "Pickup order flow." : "Home delivery order flow."}
         </div>
 
         <div className="space-y-2">
@@ -178,7 +211,7 @@ function EditStatusModal({
             {availableStatuses.map((s) => (
               <button
                 key={s}
-                onClick={() => setSelected(s as Order["orderStatus"])}
+                onClick={() => setSelected(s)}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium capitalize transition-all cursor-pointer ${
                   selected === s
                     ? "border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500"
@@ -187,18 +220,22 @@ function EditStatusModal({
               >
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    s === "pending"
+                    s === "pending_payment"
                       ? "bg-yellow-400"
-                      : s === "processing"
+                      : s === "confirmed"
                         ? "bg-blue-400"
-                        : s === "shipped"
-                          ? "bg-purple-400"
-                          : s === "delivered" || s === "confirmed"
-                            ? "bg-green-400"
-                            : "bg-red-400"
+                        : s === "processing"
+                          ? "bg-indigo-400"
+                          : s === "shipped"
+                            ? "bg-purple-400"
+                            : s === "ready_for_pickup"
+                              ? "bg-cyan-400"
+                              : s === "delivered" || s === "picked_up"
+                                ? "bg-green-400"
+                                : "bg-red-400"
                   }`}
                 />
-                {s}
+                {formatStatusLabel(s)}
               </button>
             ))}
           </div>
@@ -231,7 +268,6 @@ function EditStatusModal({
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
 export default function OrdersPage() {
   const router = useRouter();
 
@@ -249,31 +285,29 @@ export default function OrdersPage() {
 
   useEffect(() => {
     getAdminOrders()
-      .then((res) => setOrders(res.data.orders))
-      .catch((err) => setError(err.message))
+      .then((res) => {
+        const incoming = res?.data?.orders ?? [];
+        setOrders(incoming);
+      })
+      .catch((err) => setError(err?.message ?? "Failed to load orders"))
       .finally(() => setLoading(false));
   }, []);
 
-  // Optimistic update — change status in local state immediately, no refetch needed
-  async function handleStatusSave(orderId: string, status: string) {
+  async function handleStatusSave(orderId: string, status: OrderStatus) {
     await updateOrderStatus(orderId, status);
     setOrders((prev) =>
-      prev.map((o) =>
-        o._id === orderId
-          ? { ...o, orderStatus: status as Order["orderStatus"] }
-          : o,
-      ),
+      prev.map((o) => (o._id === orderId ? { ...o, orderStatus: status } : o)),
     );
   }
 
   const stats = useMemo(
     () => ({
-      pending: orders.filter((o) => o.orderStatus === "pending").length,
+      pendingPayment: orders.filter((o) => o.orderStatus === "pending_payment")
+        .length,
       processing: orders.filter((o) => o.orderStatus === "processing").length,
-      shipped: orders.filter((o) => o.orderStatus === "shipped").length,
-      delivered: orders.filter((o) =>
-        ["delivered", "confirmed"].includes(o.orderStatus),
-      ).length,
+      delivery: orders.filter((o) => o.fulfillment?.method === "home_delivery")
+        .length,
+      pickup: orders.filter((o) => o.fulfillment?.method === "pickup").length,
     }),
     [orders],
   );
@@ -282,18 +316,22 @@ export default function OrdersPage() {
     let data = [...orders];
 
     data.sort((a, b) => {
-      const pa = STATUS_PRIORITY[a.orderStatus] ?? 9;
-      const pb = STATUS_PRIORITY[b.orderStatus] ?? 9;
+      const pa = STATUS_PRIORITY[a.orderStatus] ?? 99;
+      const pb = STATUS_PRIORITY[b.orderStatus] ?? 99;
       if (pa !== pb) return pa - pb;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    if (activeTab === "pending") {
-      data = data.filter((o) => o.orderStatus === "pending");
-    } else if (activeTab === "cod") {
-      data = data.filter((o) => o.payment.method === "cod");
+    if (activeTab === "pending_payment") {
+      data = data.filter((o) => o.orderStatus === "pending_payment");
+    } else if (activeTab === "home_delivery") {
+      data = data.filter((o) => o.fulfillment?.method === "home_delivery");
+    } else if (activeTab === "pickup") {
+      data = data.filter((o) => o.fulfillment?.method === "pickup");
     } else if (activeTab === "online") {
       data = data.filter((o) => o.payment.method !== "cod");
+    } else if (activeTab === "cod") {
+      data = data.filter((o) => o.payment.method === "cod");
     }
 
     const q = search.toLowerCase().trim();
@@ -301,7 +339,8 @@ export default function OrdersPage() {
       data = data.filter(
         (o) =>
           o.orderNumber?.toLowerCase().includes(q) ||
-          o.customer?.firstName?.toLowerCase().includes(q) ||
+          o.customer?.fullName?.toLowerCase().includes(q) ||
+          o.customer?.phone?.toLowerCase().includes(q) ||
           o.customer?.email?.toLowerCase().includes(q),
       );
     }
@@ -327,17 +366,18 @@ export default function OrdersPage() {
     setCurrentPage(1);
   }, [activeTab, search, statusFilter, dateFilter]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
 
   const pageNumbers = useMemo(() => {
-    if (totalPages <= 5)
+    if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
     if (currentPage <= 3) return [1, 2, 3, 4, "...", totalPages];
-    if (currentPage >= totalPages - 2)
+    if (currentPage >= totalPages - 2) {
       return [
         1,
         "...",
@@ -346,6 +386,7 @@ export default function OrdersPage() {
         totalPages - 1,
         totalPages,
       ];
+    }
     return [
       1,
       "...",
@@ -364,33 +405,15 @@ export default function OrdersPage() {
       year: "numeric",
     });
 
-  // ✅ Format paidAt — shows time too so it's useful at a glance
-  const formatPaymentDate = (order: Order) => {
-    // COD — payment happens at door, show order date instead
-    if (order.payment.method === "cod") {
-      return new Date(order.createdAt).toLocaleDateString("en-KE", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    }
-    // Card/M-Pesa — show actual paid timestamp if available
-    if (order.payment.paidAt) {
-      return new Date(order.payment.paidAt).toLocaleString("en-KE", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-    return "—"; // initialized but not yet paid
-  };
-
   const tabs: { key: TabKey; label: string }[] = [
     { key: "all", label: "All orders" },
-    { key: "pending", label: `Pending (${stats.pending})` },
-    { key: "cod", label: "Cash on delivery" },
+    {
+      key: "pending_payment",
+      label: `Pending payment (${stats.pendingPayment})`,
+    },
+    { key: "home_delivery", label: `Home delivery (${stats.delivery})` },
+    { key: "pickup", label: `Pickup (${stats.pickup})` },
+    { key: "cod", label: "Pay on delivery" },
     { key: "online", label: "Online payments" },
   ];
 
@@ -405,7 +428,6 @@ export default function OrdersPage() {
       )}
 
       <div className="p-6 space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
@@ -418,28 +440,27 @@ export default function OrdersPage() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
             {
-              label: "Pending",
-              value: stats.pending,
+              label: "Pending Payment",
+              value: stats.pendingPayment,
               color: "text-yellow-600",
             },
             {
               label: "Processing",
               value: stats.processing,
-              color: "text-blue-600",
+              color: "text-indigo-600",
             },
             {
-              label: "Shipped",
-              value: stats.shipped,
-              color: "text-purple-600",
+              label: "Home Delivery",
+              value: stats.delivery,
+              color: "text-slate-600",
             },
             {
-              label: "Delivered",
-              value: stats.delivered,
-              color: "text-green-600",
+              label: "Pickup",
+              value: stats.pickup,
+              color: "text-orange-600",
             },
           ].map((stat) => (
             <div
@@ -454,9 +475,8 @@ export default function OrdersPage() {
           ))}
         </div>
 
-        {/* Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="flex gap-0">
+          <nav className="flex gap-0 flex-wrap">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -473,13 +493,12 @@ export default function OrdersPage() {
           </nav>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
               <input
                 type="text"
-                placeholder="Search by order ID, customer name or email…"
+                placeholder="Search by order ID, customer name, phone or email…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -491,11 +510,14 @@ export default function OrdersPage() {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               <option value="">All statuses</option>
-              <option value="pending">Pending</option>
+              <option value="pending_payment">Pending payment</option>
+              <option value="confirmed">Confirmed</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
-              <option value="confirmed">Confirmed</option>
+              <option value="ready_for_pickup">Ready for pickup</option>
               <option value="delivered">Delivered</option>
+              <option value="picked_up">Picked up</option>
+              <option value="payment_failed">Payment failed</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <select
@@ -511,20 +533,19 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[1050px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {[
                     "Order ID",
                     "Customer",
+                    "Mode",
                     "Date",
                     "Items",
                     "Total",
                     "Payment",
-                    "Date Paid",
                     "Status",
                     "Actions",
                   ].map((h) => (
@@ -570,6 +591,9 @@ export default function OrdersPage() {
                     const isLocked = LOCKED_STATUSES.includes(
                       order.orderStatus,
                     );
+                    const fulfillmentMethod =
+                      order.fulfillment?.method ?? "home_delivery";
+
                     return (
                       <tr key={order._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
@@ -577,12 +601,27 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-sm font-medium text-gray-900">
-                            {order.customer?.firstName}{" "}
-                            {order.customer?.lastName}
+                            {order.customer?.fullName || "Unknown customer"}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {order.customer?.email}
+                            {order.customer?.phone || "—"}
                           </p>
+                          {order.customer?.email && (
+                            <p className="text-xs text-gray-400">
+                              {order.customer.email}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              FULFILLMENT_STYLES[fulfillmentMethod]
+                            }`}
+                          >
+                            {fulfillmentMethod === "pickup"
+                              ? "Pickup"
+                              : "Home delivery"}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {formatDate(order.createdAt)}
@@ -605,15 +644,6 @@ export default function OrdersPage() {
                               order.payment?.method}
                           </span>
                         </td>
-                        {/* ✅ Paid At column */}
-                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
-                          {formatPaymentDate(order)}
-                          {order.payment.method === "cod" && (
-                            <span className="block text-xs text-amber-600 font-medium">
-                              On delivery
-                            </span>
-                          )}
-                        </td>
                         <td className="px-6 py-4">
                           <span
                             className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${
@@ -621,7 +651,7 @@ export default function OrdersPage() {
                               "bg-gray-100 text-gray-600"
                             }`}
                           >
-                            {order.orderStatus}
+                            {formatStatusLabel(order.orderStatus)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -642,7 +672,7 @@ export default function OrdersPage() {
                               }
                               title={
                                 isLocked
-                                  ? `Cannot edit — order is ${order.orderStatus}`
+                                  ? `Cannot edit — order is ${formatStatusLabel(order.orderStatus)}`
                                   : "Edit status"
                               }
                               className={`transition-colors ${
@@ -663,7 +693,6 @@ export default function OrdersPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {!loading && filtered.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
               <p className="text-sm text-gray-600">

@@ -1,136 +1,191 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
 import FiltersSidebar from "@/components/shop/FiltersSidebar";
-import MobileFiltersDrawer from "@/components/shop/MobileFiltersDrawer";
-import ProductsHeader from "@/components/ProductHeader";
 import ProductsGrid from "@/components/ProductGrid";
 import NoProductsFound from "@/components/NoProductsFound";
 import Pagination from "@/components/shop/Pagination";
 import { Product } from "@/types/product";
-import Link from "next/link";
-import { Sparkles, Beef, ShieldCheck, Truck } from "lucide-react";
 
 interface ShopClientProps {
   products: Product[];
+  totalPages: number;
+  totalResults: number;
+  initialSearch: string;
+  initialCategory: string;
+  initialSort: string;
+  initialInStock: boolean;
+  initialPage: number;
 }
 
 const categories = ["All", "beef", "goat", "lamb", "chicken", "camel"];
-const ITEMS_PER_PAGE = 12;
 
-export default function ShopClient({ products }: ShopClientProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedPriceRange, setSelectedPriceRange] = useState(0);
-  const [sortBy, setSortBy] = useState("default");
-  const [showFilters, setShowFilters] = useState(false);
-  const [showInStock, setShowInStock] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+export default function ShopClient({
+  products,
+  totalPages,
+  totalResults,
+  initialSearch,
+  initialCategory,
+  initialInStock,
+  initialPage,
+}: ShopClientProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    if (searchQuery) {
-      filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    if (selectedCategory !== "All") {
-      filtered = filtered.filter((p) => p.category === selectedCategory);
-    }
-
-    if (showInStock) {
-      filtered = filtered.filter((p) => p.stockkg > 0);
-    }
-
-    if (sortBy === "price-low") {
-      filtered = [...filtered].sort((a, b) => a.pricePerKg - b.pricePerKg);
-    }
-
-    if (sortBy === "price-high") {
-      filtered = [...filtered].sort((a, b) => b.pricePerKg - a.pricePerKg);
-    }
-
-    if (sortBy === "name") {
-      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return filtered;
-  }, [products, searchQuery, selectedCategory, sortBy, showInStock]);
-
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+  const [mobileSearch, setMobileSearch] = useState(initialSearch);
 
   useEffect(() => {
-    const id = setTimeout(() => setCurrentPage(1), 0);
-    return () => clearTimeout(id);
-  }, [searchQuery, selectedCategory, sortBy, showInStock]);
+    setMobileSearch(initialSearch);
+  }, [initialSearch]);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const pushParams = (params: URLSearchParams) => {
+    const query = params.toString();
+    const url = query ? `${pathname}?${query}` : pathname;
+    router.push(url);
+  };
+
+  const updateQuery = (key: string, value: string | boolean | number) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (
+      value === "" ||
+      value === false ||
+      value === "All" ||
+      value === "default" ||
+      value === null ||
+      value === undefined
+    ) {
+      params.delete(key);
+    } else {
+      params.set(key, String(value));
+    }
+
+    if (key !== "page") {
+      params.set("page", "1");
+    }
+
+    pushParams(params);
   };
 
   const clearFilters = () => {
-    setSearchQuery("");
-    setSelectedCategory("All");
-    setSortBy("default");
-    setShowInStock(false);
-    setCurrentPage(1);
+    router.push(pathname);
   };
 
-  const heroTitle =
-    selectedCategory === "All"
-      ? "Premium Halal Meat Collection"
-      : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Collection`;
+  const handlePageChange = (page: number) => {
+    const safePage = Number(page);
+    if (!Number.isFinite(safePage) || safePage < 1) return;
 
-  const heroDescription =
-    selectedCategory === "All"
-      ? "Discover fresh, premium-quality cuts carefully prepared for your everyday meals and special occasions."
-      : `Explore our fresh ${selectedCategory} selection, prepared with quality, care, and reliable delivery.`;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(safePage));
+    pushParams(params);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const trimmedLocal = mobileSearch.trim();
+    const trimmedInitial = initialSearch.trim();
+
+    if (trimmedLocal === trimmedInitial) return;
+
+    const timer = setTimeout(() => {
+      updateQuery("search", trimmedLocal);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [mobileSearch, initialSearch]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 flex flex-col lg:flex-row gap-8">
+        {/* Desktop sidebar */}
         <FiltersSidebar
           categories={categories}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          showInStock={showInStock}
-          setShowInStock={setShowInStock}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
+          selectedCategory={initialCategory}
+          setSelectedCategory={(category) => updateQuery("category", category)}
+          showInStock={initialInStock}
+          setShowInStock={(checked) => updateQuery("inStock", checked)}
+          searchQuery={initialSearch}
+          setSearchQuery={(query) => updateQuery("search", query)}
           clearFilters={clearFilters}
         />
 
-        {/* <MobileFiltersDrawer
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          showInStock={showInStock}
-          setShowInStock={setShowInStock}
-          clearFilters={clearFilters}
-        /> */}
-
         <main className="flex-1">
-          <ProductsHeader
-            filteredProducts={filteredProducts}
-            searchQuery={searchQuery}
-            selectedCategory={selectedCategory}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-          />
+          {/* Mobile search + categories */}
+          <div className="lg:hidden mb-6 space-y-4">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={mobileSearch}
+                onChange={(e) => setMobileSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
 
-          {filteredProducts.length > 0 ? (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => updateQuery("category", category)}
+                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+                    initialCategory === category
+                      ? "bg-red-600 text-white"
+                      : "bg-white border border-gray-300 text-gray-700"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
+            <label className="flex items-center gap-3 cursor-pointer bg-white border border-gray-200 rounded-xl px-4 py-3">
+              <input
+                type="checkbox"
+                checked={initialInStock}
+                onChange={(e) => updateQuery("inStock", e.target.checked)}
+                className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-700">
+                In Stock Only
+              </span>
+            </label>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          {/* Simple top info */}
+          <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              {initialCategory === "All"
+                ? "All Products"
+                : `${initialCategory.charAt(0).toUpperCase() + initialCategory.slice(1)} Products`}
+            </h1>
+            <p className="text-gray-600">
+              Showing {products.length} of {totalResults} products
+              {initialSearch ? ` for "${initialSearch}"` : ""}
+            </p>
+          </div>
+
+          {products.length > 0 ? (
             <>
-              <ProductsGrid products={currentProducts} />
+              <ProductsGrid products={products} />
               <Pagination
-                currentPage={currentPage}
+                currentPage={initialPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
               />

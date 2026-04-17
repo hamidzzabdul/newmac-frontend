@@ -1,4 +1,7 @@
+"use client";
+
 import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface FiltersSidebarProps {
   categories: string[];
@@ -21,6 +24,25 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
   setSearchQuery,
   clearFilters,
 }) => {
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const trimmedLocal = localSearch.trim();
+    const trimmedProp = searchQuery.trim();
+
+    if (trimmedLocal === trimmedProp) return;
+
+    const timer = setTimeout(() => {
+      setSearchQuery(trimmedLocal);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [localSearch, searchQuery, setSearchQuery]);
+
   return (
     <aside className="hidden lg:block w-60 shrink-0">
       <div className="bg-white rounded-xl shadow-md p-6 sticky top-8">
@@ -34,7 +56,6 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
           </button>
         </div>
 
-        {/* Search */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Search
@@ -47,14 +68,13 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             <input
               type="text"
               placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
             />
           </div>
         </div>
 
-        {/* Categories */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-gray-700 mb-3">
             Category
@@ -76,7 +96,6 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
           </div>
         </div>
 
-        {/* In Stock */}
         <div className="mb-6">
           <label className="flex items-center gap-3 cursor-pointer">
             <input

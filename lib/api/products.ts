@@ -14,6 +14,10 @@ function getAuthToken(): string | null {
 export interface GetProductsResponse {
   docs: Product[];
   result: number;
+  total: number;
+  totalPages: number;
+  totalResults: number;
+  currentPage: number;
 }
 // API Functions
 export const createProduct = async (formData: FormData): Promise<Product> => {
@@ -44,6 +48,8 @@ export const getAllProducts = async (params?: {
   limit?: number;
   search?: string;
   sort?: string;
+  category?: string;
+  inStock?: boolean;
 }): Promise<GetProductsResponse> => {
   let token: string | null = null;
 
@@ -64,7 +70,9 @@ export const getAllProducts = async (params?: {
   if (params?.page) qs.set("page", String(params.page));
   if (params?.limit) qs.set("limit", String(params.limit));
   if (params?.search) qs.set("search", params.search);
-  if (params?.sort) qs.set("sort", params.sort);
+  if (params?.sort && params.sort !== "default") qs.set("sort", params.sort);
+  if (params?.category) qs.set("category", params.category);
+  if (params?.inStock) qs.set("inStock", "true");
 
   const url = `${API_BASE_URL}/products${qs.toString() ? `?${qs.toString()}` : ""}`;
 

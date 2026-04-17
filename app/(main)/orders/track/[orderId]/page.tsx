@@ -12,8 +12,9 @@ import {
   MapPin,
   RefreshCw,
   XCircle,
+  Store,
 } from "lucide-react";
-import { getMyOrders } from "@/lib/api/orders";
+import { getOrder } from "@/lib/api/orders";
 
 interface Order {
   _id: string;
@@ -21,20 +22,23 @@ interface Order {
   createdAt: string;
   updatedAt?: string;
   orderStatus:
-    | "pending"
+    | "pending_payment"
     | "confirmed"
     | "processing"
     | "shipped"
+    | "ready_for_pickup"
     | "delivered"
-    | "cancelled";
+    | "picked_up"
+    | "cancelled"
+    | "payment_failed";
   items: { product: string; name: string; quantity: number; price: number }[];
   total: number;
+  fulfillment?: {
+    method: "home_delivery" | "pickup";
+  };
   shippingAddress: {
-    street?: string;
-    city?: string;
-    postalCode?: string;
-    country?: string;
-    deliveryNotes?: string;
+    location?: string;
+    additionalInfo?: string;
   };
   payment: {
     method: "mpesa" | "card" | "cod";
@@ -43,11 +47,11 @@ interface Order {
   };
 }
 
-const STEPS = [
+const DELIVERY_STEPS = [
   {
-    key: "pending",
+    key: "pending_payment",
     label: "Order Placed",
-    description: "We've received your order",
+    description: "We have received your order",
     icon: Clock,
   },
   {
@@ -59,7 +63,7 @@ const STEPS = [
   {
     key: "processing",
     label: "Processing",
-    description: "We're preparing your items",
+    description: "We are preparing your items",
     icon: Package,
   },
   {
@@ -76,40 +80,99 @@ const STEPS = [
   },
 ];
 
-const STATUS_ORDER = [
-  "pending",
+const PICKUP_STEPS = [
+  {
+    key: "pending_payment",
+    label: "Order Placed",
+    description: "We have received your order",
+    icon: Clock,
+  },
+  {
+    key: "confirmed",
+    label: "Confirmed",
+    description: "Your order has been confirmed",
+    icon: BadgeCheck,
+  },
+  {
+    key: "processing",
+    label: "Processing",
+    description: "We are preparing your items",
+    icon: Package,
+  },
+  {
+    key: "ready_for_pickup",
+    label: "Ready for Pickup",
+    description: "Your order is ready at the shop",
+    icon: Store,
+  },
+  {
+    key: "picked_up",
+    label: "Picked Up",
+    description: "Order collected successfully",
+    icon: CheckCircle,
+  },
+];
+
+const DELIVERY_STATUS_ORDER = [
+  "pending_payment",
   "confirmed",
   "processing",
   "shipped",
   "delivered",
 ];
 
+const PICKUP_STATUS_ORDER = [
+  "pending_payment",
+  "confirmed",
+  "processing",
+  "ready_for_pickup",
+  "picked_up",
+];
+
 export default function OrderTrackingPage() {
-  const { orderNumber } = useParams<{ orderNumber: string }>();
   const router = useRouter();
+  const params = useParams<{ orderId: string }>();
+  const orderId = params?.orderId;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    if (!orderId) {
+      console.log("Route params:", params);
+      setError("Missing order ID");
+      setLoading(false);
+      return;
+    }
+    const fetchOrder = async () => {
       try {
         setLoading(true);
-        const res = await getMyOrders();
-        const found = res.data.orders.find(
-          (o: Order) => o.orderNumber === orderNumber,
-        );
-        if (!found) throw new Error("Order not found");
+        setError(null);
+
+        console.log("Fetching order:", orderId);
+
+        const res = await getOrder(orderId);
+
+        console.log("Order response:", res);
+
+        const found = res?.data?.order;
+
+        if (!found) {
+          throw new Error("Order not found");
+        }
+
         setOrder(found);
       } catch (err: any) {
-        setError(err.message || "Failed to load order");
+        console.error("Tracking page error:", err);
+        setError(err?.message || "Failed to load order");
       } finally {
         setLoading(false);
       }
     };
-    fetch();
-  }, [orderNumber]);
+
+    fetchOrder();
+  }, [orderId]);
 
   if (loading) {
     return (
@@ -141,20 +204,23 @@ export default function OrderTrackingPage() {
     );
   }
 
+  const isPickup = order.fulfillment?.method === "pickup";
   const isCancelled = order.orderStatus === "cancelled";
+  const steps = isPickup ? PICKUP_STEPS : DELIVERY_STEPS;
+  const statusOrder = isPickup ? PICKUP_STATUS_ORDER : DELIVERY_STATUS_ORDER;
+
   const currentStepIndex = isCancelled
     ? -1
-    : STATUS_ORDER.indexOf(order.orderStatus);
+    : statusOrder.indexOf(order.orderStatus);
 
-  const formatAddress = (addr: Order["shippingAddress"]) =>
-    [addr.street, addr.city, addr.postalCode, addr.country]
-      .filter(Boolean)
-      .join(", ");
+  const formatLocation = (addr: Order["shippingAddress"]) => {
+    if (isPickup) return "Pickup at shop";
+    return addr?.location || "No location provided";
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-10">
-        {/* Back button */}
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-8 cursor-pointer group"
@@ -163,7 +229,6 @@ export default function OrderTrackingPage() {
           Back to Orders
         </button>
 
-        {/* Header card */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -187,15 +252,13 @@ export default function OrderTrackingPage() {
                 Cancelled
               </span>
             ) : (
-              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200 shrink-0">
-                {order.orderStatus.charAt(0).toUpperCase() +
-                  order.orderStatus.slice(1)}
+              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200 shrink-0 capitalize">
+                {order.orderStatus.replace(/_/g, " ")}
               </span>
             )}
           </div>
         </div>
 
-        {/* Tracking stepper */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-6">
             Tracking
@@ -213,16 +276,15 @@ export default function OrderTrackingPage() {
             </div>
           ) : (
             <div className="relative">
-              {STEPS.map((step, index) => {
+              {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isDone = index < currentStepIndex;
                 const isCurrent = index === currentStepIndex;
                 const isUpcoming = index > currentStepIndex;
-                const isLast = index === STEPS.length - 1;
+                const isLast = index === steps.length - 1;
 
                 return (
                   <div key={step.key} className="flex gap-4">
-                    {/* Icon + line */}
                     <div className="flex flex-col items-center">
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all ${
@@ -235,11 +297,7 @@ export default function OrderTrackingPage() {
                       >
                         <Icon
                           className={`w-4 h-4 ${
-                            isDone
-                              ? "text-white"
-                              : isCurrent
-                                ? "text-white"
-                                : "text-gray-400"
+                            isDone || isCurrent ? "text-white" : "text-gray-400"
                           }`}
                         />
                       </div>
@@ -252,7 +310,6 @@ export default function OrderTrackingPage() {
                       )}
                     </div>
 
-                    {/* Text */}
                     <div className="pb-8 pt-1.5">
                       <p
                         className={`text-sm font-bold ${
@@ -282,29 +339,31 @@ export default function OrderTrackingPage() {
           )}
         </div>
 
-        {/* Delivery info */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">
-            Delivery Address
+            {isPickup ? "Pickup Details" : "Delivery Address"}
           </h2>
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-              <MapPin className="w-4 h-4 text-gray-500" />
+              {isPickup ? (
+                <Store className="w-4 h-4 text-gray-500" />
+              ) : (
+                <MapPin className="w-4 h-4 text-gray-500" />
+              )}
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">
-                {formatAddress(order.shippingAddress) || "No address provided"}
+                {formatLocation(order.shippingAddress)}
               </p>
-              {order.shippingAddress.deliveryNotes && (
+              {order.shippingAddress?.additionalInfo && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Note: {order.shippingAddress.deliveryNotes}
+                  Note: {order.shippingAddress.additionalInfo}
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Items summary */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">
             Items ({order.items.length})
@@ -339,7 +398,6 @@ export default function OrderTrackingPage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
           <button
             onClick={() => router.push("/orders")}

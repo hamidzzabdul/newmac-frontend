@@ -29,8 +29,8 @@ function Product({ category, products }: ProductProps) {
     <section className="py-6 w-full">
       <div className="w-full px-4 py-3 bg-red-500 flex items-center justify-between rounded-t-md shadow-sm">
         <div>
-          <p className="text-base md:text-lg font-semibold text-white tracking-wide">
-            {category.name}
+          <p className="text-base md:text-lg font-semibold text-white tracking-wide uppercase">
+            {category.name} products
           </p>
           <p className="text-xs text-red-100">
             Fresh premium cuts selected for you
@@ -39,10 +39,10 @@ function Product({ category, products }: ProductProps) {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/shop"
+            href={`/shop?category=${category.name.toLowerCase()}`}
             className="text-sm text-white hover:text-red-100 transition-colors cursor-pointer"
           >
-            See All
+            See all
           </Link>
 
           <div className="hidden sm:flex items-center gap-2">

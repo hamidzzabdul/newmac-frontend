@@ -22,7 +22,7 @@ import { clearCart } from "@/app/store/features/CartSlice";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Paid success page (Paystack — card or M-Pesa)
+// Paid success page
 // ─────────────────────────────────────────────────────────────────────────────
 function PaidSuccess({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -38,7 +38,6 @@ function PaidSuccess({ orderId }: { orderId: string }) {
     <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Green header */}
           <div className="bg-green-600 px-8 py-10 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-5">
               <CheckCircle className="w-9 h-9 text-green-600" />
@@ -52,7 +51,6 @@ function PaidSuccess({ orderId }: { orderId: string }) {
           </div>
 
           <div className="p-6 sm:p-8 space-y-5">
-            {/* Order ID */}
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-0.5">
@@ -71,7 +69,6 @@ function PaidSuccess({ orderId }: { orderId: string }) {
               </button>
             </div>
 
-            {/* Timeline */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
                 What happens next
@@ -137,7 +134,6 @@ function PaidSuccess({ orderId }: { orderId: string }) {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="space-y-2.5 pt-1">
               <button
                 onClick={() => router.push(`/orders/track/${orderId}`)}
@@ -166,7 +162,6 @@ function PaidSuccess({ orderId }: { orderId: string }) {
             </div>
           </div>
 
-          {/* Email footer */}
           <div className="px-6 sm:px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
               <svg
@@ -211,6 +206,7 @@ function PaidSuccess({ orderId }: { orderId: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function PaymentFailed({ orderId }: { orderId: string }) {
   const router = useRouter();
+
   return (
     <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
@@ -219,19 +215,22 @@ function PaymentFailed({ orderId }: { orderId: string }) {
             <AlertCircle className="w-9 h-9 text-red-500" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-1">Payment failed</h1>
-          <p className="text-red-100 text-sm">Your card was not charged</p>
+          <p className="text-red-100 text-sm">Your payment was not confirmed</p>
         </div>
+
         <div className="p-6 sm:p-8 space-y-4">
           <p className="text-sm text-gray-600 text-center">
             Something went wrong with your payment. Your order is still saved —
             you can try again.
           </p>
+
           <button
             onClick={() => router.push(`/checkout?retry=${orderId}`)}
             className="w-full py-3.5 bg-black text-white text-sm font-semibold rounded-xl hover:bg-gray-900 cursor-pointer"
           >
             Try again
           </button>
+
           <button
             onClick={() => router.push("/")}
             className="w-full py-2.5 text-xs text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
@@ -245,7 +244,7 @@ function PaymentFailed({ orderId }: { orderId: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Verifying state — shown while we call /verify
+// Verifying state
 // ─────────────────────────────────────────────────────────────────────────────
 function Verifying() {
   return (
@@ -418,73 +417,72 @@ export default function OrderSuccessPage() {
   const dispatch = useDispatch();
 
   const urlOrderId = searchParams.get("orderId");
-  const method = searchParams.get("method"); // "cod" | null
+  const method = searchParams.get("method");
 
   const [orderId, setOrderId] = useState<string | null>(urlOrderId);
 
-  // "verifying" → calling /verify
-  // "paid"      → payment confirmed
-  // "failed"    → payment failed
-  // "cod"       → cash on delivery, no verify needed
   const [verifyState, setVerifyState] = useState<
     "verifying" | "paid" | "failed" | "cod"
   >("verifying");
 
   useEffect(() => {
-    // Resolve orderId from localStorage if missing (Paystack redirect — no orderId in URL)
     const resolvedId = urlOrderId ?? localStorage.getItem("pending_order_id");
-    if (resolvedId) setOrderId(resolvedId);
 
-    // Clear cart universally
-    dispatch(clearCart());
-    localStorage.removeItem("pending_order_id");
+    if (resolvedId) {
+      setOrderId(resolvedId);
+    }
 
-    // COD — skip verify entirely
+    // COD / pickup flow
     if (method === "cod") {
+      dispatch(clearCart());
+      localStorage.removeItem("pending_order_id");
       setVerifyState("cod");
       return;
     }
 
-    // ✅ Card/M-Pesa — always verify with backend before showing success
-    // This is the fallback for when the webhook hasn't fired yet
+    // Paystack flow
     if (!resolvedId) {
-      // No order ID at all — nothing to verify
       setVerifyState("failed");
       return;
     }
 
-    fetch(`${API_URL}/orders/${resolvedId}/paystack/verify`)
-      .then((res) => res.json())
-      .then((data) => {
+    fetch(`${API_URL}/orders/${resolvedId}/paystack/verify`, {
+      method: "GET",
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        const data = await res.json();
+
         if (
+          res.ok &&
           data.status === "success" &&
-          (data.data.paystackStatus === "success" ||
-            data.data.paymentStatus === "paid")
+          (data.data?.paystackStatus === "success" ||
+            data.data?.paymentStatus === "paid")
         ) {
+          dispatch(clearCart());
+          localStorage.removeItem("pending_order_id");
           setVerifyState("paid");
-        } else {
-          setVerifyState("failed");
+          return;
         }
+
+        setVerifyState("failed");
       })
       .catch(() => {
-        // Network error — still show success optimistically
-        // The webhook will have updated the DB even if verify failed here
-        setVerifyState("paid");
+        setVerifyState("failed");
       });
   }, [dispatch, urlOrderId, method]);
 
-  // Show spinner while verifying
   if (verifyState === "verifying" && method !== "cod") {
     return <Verifying />;
   }
 
   if (verifyState === "cod") {
-    return <CodSuccess orderId={orderId!} />;
+    return <CodSuccess orderId={orderId ?? ""} />;
   }
 
   if (verifyState === "failed") {
     return <PaymentFailed orderId={orderId ?? ""} />;
   }
 
-  return <PaidSuccess orderId={orderId!} />;
+  return <PaidSuccess orderId={orderId ?? ""} />;
 }
