@@ -148,7 +148,7 @@ function Footer() {
                     className="text-red-500 group-hover:text-white"
                   />
                 </div>
-                <span className="text-sm">newmark.primecut@gmail.com</span>
+                <span className="text-sm">newmark.primecuts@gmail.com</span>
               </a>
 
               <div className="flex items-center gap-3 text-gray-400">

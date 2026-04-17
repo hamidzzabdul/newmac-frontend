@@ -39,10 +39,14 @@ function NavActions({ onOpenAuth }: NavActionsProps) {
   };
 
   const openAuth = (tab: "login" | "register") => {
+    if (onOpenAuth) {
+      onOpenAuth(tab);
+      return;
+    }
+
     setAuthTab(tab);
     setAuthModalOpen(true);
   };
-
   return (
     <>
       <AuthModal
