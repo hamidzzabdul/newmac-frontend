@@ -12,14 +12,13 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { checkoutSchema } from "@/types/checkout.schema";
-import { createOrder } from "@/lib/api/orders";
+import { createOrder, initializePaystackPayment } from "@/lib/api/orders";
 import to254 from "@/lib/api/orders";
 import toast from "react-hot-toast";
 import { clearCart } from "@/app/store/features/CartSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/app/store";
 import Link from "next/link";
-import { initializePaystackPayment } from "@/lib/api/orders";
 import { z } from "zod";
 
 interface CheckoutStep {
@@ -110,12 +109,6 @@ const CheckoutPage = () => {
       const valid = await trigger(fieldsToValidate);
       if (!valid) return;
 
-      if (values.fulfillmentMethod === "pickup") {
-        setCurrentStep(3);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-
       setCurrentStep(2);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -132,14 +125,10 @@ const CheckoutPage = () => {
 
   const prevStep = () => {
     if (currentStep === 1) return;
-
-    if (fulfillmentMethod === "pickup" && currentStep === 3) {
-      setCurrentStep(1);
-      return;
-    }
-
     setCurrentStep((s) => s - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
   const authUser =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("auth_user") || "null")
@@ -147,8 +136,7 @@ const CheckoutPage = () => {
 
   const onSubmit = async (data: CheckoutFormData) => {
     try {
-      const effectivePaymentMethod =
-        data.fulfillmentMethod === "pickup" ? "cod" : data.paymentMethod;
+      const effectivePaymentMethod = data.paymentMethod;
 
       const orderPayload = {
         items: cartItems.map((item) => ({
@@ -174,11 +162,7 @@ const CheckoutPage = () => {
 
       if (effectivePaymentMethod === "cod") {
         dispatch(clearCart());
-        toast.success(
-          data.fulfillmentMethod === "pickup"
-            ? "Pickup order placed successfully!"
-            : "Home delivery order placed successfully!",
-        );
+        toast.success("Home delivery order placed successfully!");
         window.location.href = `/orders/success?orderId=${orderId}&method=cod`;
         return;
       }
@@ -221,17 +205,8 @@ const CheckoutPage = () => {
           <div className="flex items-center gap-1 text-xs">
             {steps.map((step, idx) => {
               const Icon = step.icon;
-              const done =
-                fulfillmentMethod === "pickup"
-                  ? step.number === 1
-                    ? currentStep > 1
-                    : false
-                  : currentStep > step.number;
+              const done = currentStep > step.number;
               const active = currentStep === step.number;
-              const hidden =
-                fulfillmentMethod === "pickup" && step.number === 2;
-
-              if (hidden) return null;
 
               return (
                 <div key={step.number} className="flex items-center gap-1">
@@ -255,10 +230,10 @@ const CheckoutPage = () => {
                     <span className="hidden sm:inline">{step.title}</span>
                     <span className="sm:hidden">{step.number}</span>
                   </button>
-                  {idx < steps.length - 1 &&
-                    !(fulfillmentMethod === "pickup" && step.number === 1) && (
-                      <span className="text-gray-300 text-xs">›</span>
-                    )}
+
+                  {idx < steps.length - 1 && (
+                    <span className="text-gray-300 text-xs">›</span>
+                  )}
                 </div>
               );
             })}
@@ -304,6 +279,10 @@ const CheckoutPage = () => {
                             setValue("fulfillmentMethod", "home_delivery", {
                               shouldValidate: true,
                             });
+                            setValue("paymentMethod", "card", {
+                              shouldValidate: false,
+                            });
+                            setPaymentUI("card");
                             setCurrentStep(1);
                           }}
                           className="mt-1 cursor-pointer accent-black"
@@ -341,10 +320,10 @@ const CheckoutPage = () => {
                             setValue("fulfillmentMethod", "pickup", {
                               shouldValidate: true,
                             });
-                            setValue("paymentMethod", "cod", {
+                            setValue("paymentMethod", "card", {
                               shouldValidate: false,
                             });
-                            setPaymentUI("cod");
+                            setPaymentUI("card");
                             setCurrentStep(1);
                           }}
                           className="mt-1 cursor-pointer accent-black"
@@ -360,7 +339,7 @@ const CheckoutPage = () => {
                             Collect your order directly from our shop
                           </p>
                           <p className="text-xs text-green-600 font-medium mt-1">
-                            Free
+                            Free pickup
                           </p>
                         </div>
                       </label>
@@ -461,7 +440,7 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            {currentStep === 2 && fulfillmentMethod === "home_delivery" && (
+            {currentStep === 2 && (
               <div className="p-6 sm:p-8 space-y-5">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-1">
@@ -520,72 +499,75 @@ const CheckoutPage = () => {
                     </div>
                   </label>
 
-                  <label
-                    className={`flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-150 ${
-                      paymentUI === "cod"
-                        ? "border-amber-500 bg-amber-50/60"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      value="cod"
-                      {...register("paymentMethod")}
-                      checked={paymentUI === "cod"}
-                      onChange={() => {
-                        setPaymentUI("cod");
-                        setValue("paymentMethod", "cod", {
-                          shouldValidate: true,
-                        });
-                      }}
-                      className="mt-1 cursor-pointer accent-amber-600"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 text-sm mb-1">
-                        Pay on Delivery
+                  {fulfillmentMethod === "home_delivery" && (
+                    <label
+                      className={`flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-150 ${
+                        paymentUI === "cod"
+                          ? "border-amber-500 bg-amber-50/60"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        value="cod"
+                        {...register("paymentMethod")}
+                        checked={paymentUI === "cod"}
+                        onChange={() => {
+                          setPaymentUI("cod");
+                          setValue("paymentMethod", "cod", {
+                            shouldValidate: true,
+                          });
+                        }}
+                        className="mt-1 cursor-pointer accent-amber-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 text-sm mb-1">
+                          Pay on Delivery
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Pay when your order is delivered
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Pay when your order is delivered
-                      </p>
-                    </div>
-                    <div className="w-9 h-9 bg-amber-100 border border-amber-200 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-4 h-4 text-amber-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                      >
-                        <rect x="2" y="6" width="20" height="12" rx="2" />
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M6 12h.01M18 12h.01" />
-                      </svg>
-                    </div>
-                  </label>
-
-                  {paymentUI === "cod" && (
-                    <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"
-                        />
-                      </svg>
-                      <p className="text-xs text-amber-800 leading-relaxed">
-                        Please have the payment ready when your order arrives.
-                        Our team will confirm your order first.
-                      </p>
-                    </div>
+                      <div className="w-9 h-9 bg-amber-100 border border-amber-200 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4 text-amber-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.8}
+                        >
+                          <rect x="2" y="6" width="20" height="12" rx="2" />
+                          <circle cx="12" cy="12" r="3" />
+                          <path d="M6 12h.01M18 12h.01" />
+                        </svg>
+                      </div>
+                    </label>
                   )}
+
+                  {fulfillmentMethod === "home_delivery" &&
+                    paymentUI === "cod" && (
+                      <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"
+                          />
+                        </svg>
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                          Please have the payment ready when your order arrives.
+                          Our team will confirm your order first.
+                        </p>
+                      </div>
+                    )}
                 </div>
               </div>
             )}
@@ -641,99 +623,64 @@ const CheckoutPage = () => {
                   </div>
                 </div>
 
-                {fulfillmentMethod === "home_delivery" && (
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <CreditCard className="w-4 h-4 text-gray-400" />
-                        Payment method
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentStep(2)}
-                        className="text-xs text-gray-400 hover:text-black transition-colors underline underline-offset-2 cursor-pointer"
-                      >
-                        Change
-                      </button>
+                <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <CreditCard className="w-4 h-4 text-gray-400" />
+                      Payment method
                     </div>
-                    <div className="px-4 py-3.5 flex items-center gap-3">
-                      {paymentMethod === "cod" ? (
-                        <>
-                          <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-4 h-4 text-amber-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                            >
-                              <rect x="2" y="6" width="20" height="12" rx="2" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">
-                              Pay on Delivery
-                            </p>
-                            <p className="text-xs text-amber-600 font-medium">
-                              Pay when your order arrives
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex gap-1">
-                            <div className="w-7 h-5 bg-green-600 rounded text-white text-[8px] font-bold flex items-center justify-center">
-                              M-P
-                            </div>
-                            <div className="w-7 h-5 bg-blue-600 rounded" />
-                            <div className="w-7 h-5 bg-red-500 rounded" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">
-                              M-Pesa or Card
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              via Paystack
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(2)}
+                      className="text-xs text-gray-400 hover:text-black transition-colors underline underline-offset-2 cursor-pointer"
+                    >
+                      Change
+                    </button>
                   </div>
-                )}
-
-                {fulfillmentMethod === "pickup" && (
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <Store className="w-4 h-4 text-gray-400" />
-                        Pickup
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentStep(1)}
-                        className="text-xs text-gray-400 hover:text-black transition-colors underline underline-offset-2 cursor-pointer"
-                      >
-                        Change
-                      </button>
-                    </div>
-                    <div className="px-4 py-3.5 flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Store className="w-4 h-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">
-                          Pick up at Shop
-                        </p>
-                        <p className="text-xs text-green-600 font-medium">
-                          No delivery charge
-                        </p>
-                      </div>
-                    </div>
+                  <div className="px-4 py-3.5 flex items-center gap-3">
+                    {paymentMethod === "cod" ? (
+                      <>
+                        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4 text-amber-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                          >
+                            <rect x="2" y="6" width="20" height="12" rx="2" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">
+                            Pay on Delivery
+                          </p>
+                          <p className="text-xs text-amber-600 font-medium">
+                            Pay when your order arrives
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex gap-1">
+                          <div className="w-7 h-5 bg-green-600 rounded text-white text-[8px] font-bold flex items-center justify-center">
+                            M-P
+                          </div>
+                          <div className="w-7 h-5 bg-blue-600 rounded" />
+                          <div className="w-7 h-5 bg-red-500 rounded" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">
+                            M-Pesa or Card
+                          </p>
+                          <p className="text-xs text-gray-400">via Paystack</p>
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
 
                 <div className="rounded-xl border border-gray-100 overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100 text-sm font-semibold text-gray-700">
@@ -814,6 +761,7 @@ const CheckoutPage = () => {
                     Continue
                   </button>
                 ) : null}
+
                 {currentStep === 3 && (
                   <button
                     type="button"
@@ -829,7 +777,7 @@ const CheckoutPage = () => {
                     className={`flex-1 px-6 py-3.5 rounded-xl text-sm font-bold transition-all duration-150 shadow-sm flex items-center justify-center gap-2 ${
                       clicked
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : fulfillmentMethod === "pickup" || paymentUI === "cod"
+                        : paymentUI === "cod"
                           ? "bg-amber-500 hover:bg-amber-600 text-white active:scale-[0.99] cursor-pointer"
                           : "bg-green-600 hover:bg-green-700 text-white active:scale-[0.99] cursor-pointer"
                     }`}
@@ -857,8 +805,6 @@ const CheckoutPage = () => {
                         </svg>
                         Placing order…
                       </>
-                    ) : fulfillmentMethod === "pickup" ? (
-                      "Confirm pickup order"
                     ) : paymentUI === "cod" ? (
                       "Confirm home delivery order"
                     ) : (
@@ -877,6 +823,7 @@ const CheckoutPage = () => {
                   Order summary
                 </h3>
               </div>
+
               <div className="px-5 py-4">
                 <div className="space-y-2.5 pb-4 border-b border-gray-50">
                   {cartItems.map((item, i) => (
@@ -961,16 +908,10 @@ const CheckoutPage = () => {
             </div>
 
             <p className="mt-3 text-center text-xs text-gray-400">
-              Step{" "}
-              {fulfillmentMethod === "pickup"
-                ? currentStep === 1
-                  ? 1
-                  : 2
-                : currentStep}{" "}
-              of {fulfillmentMethod === "pickup" ? 2 : steps.length} ·{" "}
+              Step {currentStep} of {steps.length} ·{" "}
               {currentStep === 1
                 ? "Delivery details"
-                : currentStep === 2 && fulfillmentMethod === "home_delivery"
+                : currentStep === 2
                   ? "Choose payment"
                   : "Review & confirm"}
             </p>
