@@ -20,6 +20,40 @@ import { useDispatch } from "react-redux";
 import { clearCart } from "@/app/store/features/CartSlice";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const SUCCESS_CACHE_KEY = "last_successful_order";
+
+function saveSuccessfulOrder(orderId: string, type: "paid" | "cod") {
+  try {
+    localStorage.setItem(
+      SUCCESS_CACHE_KEY,
+      JSON.stringify({
+        orderId,
+        type,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {}
+}
+
+function getSuccessfulOrderCache(): {
+  orderId: string;
+  type: "paid" | "cod";
+  savedAt: number;
+} | null {
+  try {
+    const raw = localStorage.getItem(SUCCESS_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function clearSuccessfulOrderCache() {
+  try {
+    localStorage.removeItem(SUCCESS_CACHE_KEY);
+  } catch {}
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paid success page
@@ -27,12 +61,34 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 function PaidSuccess({ orderId }: { orderId: string }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
   const copyId = () => {
     navigator.clipboard.writeText(orderId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  useEffect(() => {
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const redirectTimer = setTimeout(() => {
+      router.replace("/");
+    }, 5000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearTimeout(redirectTimer);
+    };
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4">
@@ -69,6 +125,11 @@ function PaidSuccess({ orderId }: { orderId: string }) {
               </button>
             </div>
 
+            <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+              Redirecting to homepage in{" "}
+              <span className="font-bold">{countdown}</span>s...
+            </div>
+
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
                 What happens next
@@ -92,15 +153,15 @@ function PaidSuccess({ orderId }: { orderId: string }) {
                   {
                     icon: Truck,
                     color: "bg-amber-500",
-                    label: "Out for delivery",
-                    sub: "On the way to your door",
+                    label: "Out for delivery / ready for pickup",
+                    sub: "We’ll notify you when the order is ready",
                     done: false,
                   },
                   {
                     icon: MapPin,
                     color: "bg-gray-700",
-                    label: "Delivered",
-                    sub: "Enjoy your fresh produce!",
+                    label: "Completed",
+                    sub: "Delivered or picked up successfully",
                     done: false,
                   },
                 ].map((step, i, arr) => (
@@ -157,7 +218,7 @@ function PaidSuccess({ orderId }: { orderId: string }) {
                 onClick={() => router.push("/")}
                 className="w-full py-2.5 text-xs text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               >
-                Continue shopping
+                Continue shopping now
               </button>
             </div>
           </div>
@@ -284,12 +345,34 @@ function Verifying() {
 function CodSuccess({ orderId }: { orderId: string }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
   const copyId = () => {
     navigator.clipboard.writeText(orderId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  useEffect(() => {
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const redirectTimer = setTimeout(() => {
+      router.replace("/");
+    }, 5000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearTimeout(redirectTimer);
+    };
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center p-4">
@@ -324,6 +407,11 @@ function CodSuccess({ orderId }: { orderId: string }) {
                 <Copy className="w-3 h-3" />
                 {copied ? "Copied!" : "Copy"}
               </button>
+            </div>
+
+            <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Redirecting to homepage in{" "}
+              <span className="font-bold">{countdown}</span>s...
             </div>
 
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
@@ -365,7 +453,7 @@ function CodSuccess({ orderId }: { orderId: string }) {
                 onClick={() => router.push("/")}
                 className="w-full py-2.5 text-xs text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               >
-                Continue shopping
+                Continue shopping now
               </button>
             </div>
           </div>
@@ -420,27 +508,48 @@ export default function OrderSuccessPage() {
   const method = searchParams.get("method");
 
   const [orderId, setOrderId] = useState<string | null>(urlOrderId);
-
   const [verifyState, setVerifyState] = useState<
     "verifying" | "paid" | "failed" | "cod"
   >("verifying");
 
   useEffect(() => {
-    const resolvedId = urlOrderId ?? localStorage.getItem("pending_order_id");
+    const cached = getSuccessfulOrderCache();
+    const pendingOrderId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("pending_order_id")
+        : null;
+
+    const resolvedId = urlOrderId ?? pendingOrderId ?? cached?.orderId ?? null;
 
     if (resolvedId) {
       setOrderId(resolvedId);
     }
 
-    // COD / pickup flow
+    // COD flow
     if (method === "cod") {
+      if (resolvedId) {
+        saveSuccessfulOrder(resolvedId, "cod");
+      }
       dispatch(clearCart());
       localStorage.removeItem("pending_order_id");
       setVerifyState("cod");
       return;
     }
 
-    // Paystack flow
+    // If we already confirmed this order recently, do not re-fail on reload
+    if (
+      cached &&
+      resolvedId &&
+      cached.orderId === resolvedId &&
+      cached.type === "paid" &&
+      Date.now() - cached.savedAt < 15 * 60 * 1000
+    ) {
+      dispatch(clearCart());
+      localStorage.removeItem("pending_order_id");
+      setVerifyState("paid");
+      return;
+    }
+
     if (!resolvedId) {
       setVerifyState("failed");
       return;
@@ -461,6 +570,7 @@ export default function OrderSuccessPage() {
         ) {
           dispatch(clearCart());
           localStorage.removeItem("pending_order_id");
+          saveSuccessfulOrder(resolvedId, "paid");
           setVerifyState("paid");
           return;
         }
@@ -468,9 +578,30 @@ export default function OrderSuccessPage() {
         setVerifyState("failed");
       })
       .catch(() => {
+        // fall back to cached success if available
+        const fallbackCached = getSuccessfulOrderCache();
+        if (
+          fallbackCached &&
+          resolvedId &&
+          fallbackCached.orderId === resolvedId &&
+          fallbackCached.type === "paid" &&
+          Date.now() - fallbackCached.savedAt < 15 * 60 * 1000
+        ) {
+          dispatch(clearCart());
+          localStorage.removeItem("pending_order_id");
+          setVerifyState("paid");
+          return;
+        }
+
         setVerifyState("failed");
       });
   }, [dispatch, urlOrderId, method]);
+
+  useEffect(() => {
+    return () => {
+      // optional cleanup later if you want; leaving cache helps survive reload
+    };
+  }, []);
 
   if (verifyState === "verifying" && method !== "cod") {
     return <Verifying />;

@@ -20,6 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/app/store";
 import Link from "next/link";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 
 interface CheckoutStep {
   number: number;
@@ -37,6 +38,9 @@ const steps: CheckoutStep[] = [
 
 const CheckoutPage = () => {
   const cartItems = useSelector((state: RootState) => state.cart.items);
+
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentUI, setPaymentUI] = useState<"card" | "cod">("card");
@@ -81,6 +85,15 @@ const CheckoutPage = () => {
       }
     } catch {}
   }, [setValue]);
+
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      router.replace("/cart");
+      return;
+    }
+
+    setReady(true);
+  }, [cartItems.length, router]);
 
   const fulfillmentMethod = watch("fulfillmentMethod");
   const paymentMethod = watch("paymentMethod");
@@ -189,6 +202,10 @@ const CheckoutPage = () => {
         ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
         : "border-gray-200 focus:border-black focus:ring-2 focus:ring-black/8"
     }`;
+
+  if (!ready) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
