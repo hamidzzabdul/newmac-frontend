@@ -29,12 +29,15 @@ interface Order {
   orderNumber: string;
   createdAt: string;
   orderStatus:
-    | "pending"
+    | "pending_payment"
     | "confirmed"
     | "processing"
     | "shipped"
+    | "ready_for_pickup"
     | "delivered"
-    | "cancelled";
+    | "picked_up"
+    | "cancelled"
+    | "payment_failed";
   items: OrderItem[];
   total: number;
   subtotal: number;
@@ -95,10 +98,18 @@ const MyOrders = () => {
     fetchOrders();
   }, [mounted]);
 
-  const getStatusConfig = (status: Order["orderStatus"]) => {
-    const configs = {
-      pending: {
-        label: "Pending",
+  const getStatusConfig = (status: string) => {
+    const configs: Record<
+      string,
+      {
+        label: string;
+        color: string;
+        icon: any;
+        dotColor: string;
+      }
+    > = {
+      pending_payment: {
+        label: "Pending Payment",
         color: "bg-yellow-100 text-yellow-800 border-yellow-200",
         icon: Clock,
         dotColor: "bg-yellow-500",
@@ -121,11 +132,23 @@ const MyOrders = () => {
         icon: Truck,
         dotColor: "bg-purple-500",
       },
+      ready_for_pickup: {
+        label: "Ready for Pickup",
+        color: "bg-indigo-100 text-indigo-800 border-indigo-200",
+        icon: Package,
+        dotColor: "bg-indigo-500",
+      },
       delivered: {
         label: "Delivered",
         color: "bg-green-100 text-green-800 border-green-200",
         icon: CheckCircle,
         dotColor: "bg-green-500",
+      },
+      picked_up: {
+        label: "Picked Up",
+        color: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        icon: CheckCircle,
+        dotColor: "bg-emerald-500",
       },
       cancelled: {
         label: "Cancelled",
@@ -133,10 +156,23 @@ const MyOrders = () => {
         icon: XCircle,
         dotColor: "bg-red-500",
       },
+      payment_failed: {
+        label: "Payment Failed",
+        color: "bg-red-100 text-red-800 border-red-200",
+        icon: XCircle,
+        dotColor: "bg-red-500",
+      },
     };
-    return configs[status];
-  };
 
+    return (
+      configs[status] || {
+        label: status.replace(/_/g, " "),
+        color: "bg-gray-100 text-gray-800 border-gray-200",
+        icon: Clock,
+        dotColor: "bg-gray-500",
+      }
+    );
+  };
   const formatPaymentMethod = (method: Order["payment"]["method"]) => {
     return { mpesa: "M-Pesa", card: "Card", cod: "Cash on Delivery" }[method];
   };
