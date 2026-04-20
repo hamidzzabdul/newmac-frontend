@@ -12,8 +12,15 @@ import {
   Search,
   RefreshCw,
   BadgeCheck,
+  CreditCard,
+  MapPin,
 } from "lucide-react";
-import { getMyOrders, downloadReceipt } from "@/lib/api/orders"; // adjust path as needed
+import {
+  getMyOrders,
+  downloadReceipt,
+  initializePaystackPayment,
+  cancelOrder,
+} from "@/lib/api/orders";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -47,25 +54,23 @@ interface Order {
     status: "pending" | "paid" | "failed" | "refunded";
     mpesaReceiptNumber?: string;
   };
-  shippingAddress: {
-    street?: string;
-    city?: string;
-    postalCode?: string;
-    deliveryNotes?: string;
-    country?: string;
+  fulfillment?: {
+    method?: "home_delivery" | "pickup";
+  };
+  shippingAddress?: {
+    location?: string;
+    additionalInfo?: string;
   };
 }
 
 const MyOrders = () => {
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    console.log("Component mounted, fetching orders...");
-  }, []);
-
   const [orders, setOrders] = useState<Order[]>([]);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(
+    null,
+  );
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
     null,
   );
   const [loading, setLoading] = useState(true);
@@ -75,26 +80,26 @@ const MyOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Add this temporarily to debug
-      const token = localStorage.getItem("auth_token");
-
       const res = await getMyOrders();
-      setOrders(res.data.orders);
+      setOrders(res.data.orders || []);
     } catch (err: any) {
-      console.error("Full error:", err);
-      setError(err.message || "Failed to load orders");
+      setError("Failed to load orders");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!mounted) return; // ← wait for client
+    if (!mounted) return;
     fetchOrders();
   }, [mounted]);
 
@@ -173,24 +178,43 @@ const MyOrders = () => {
       }
     );
   };
+
   const formatPaymentMethod = (method: Order["payment"]["method"]) => {
-    return { mpesa: "M-Pesa", card: "Card", cod: "Cash on Delivery" }[method];
+    return {
+      mpesa: "M-Pesa",
+      card: "Card",
+      cod: "Cash on Delivery",
+    }[method];
   };
 
-  const formatAddress = (addr: Order["shippingAddress"]) => {
-    return [addr.street, addr.city, addr.postalCode, addr.country]
-      .filter(Boolean)
-      .join(", ");
+  const formatAddress = (order: Order) => {
+    if (order.fulfillment?.method === "pickup") {
+      return "Pickup at shop";
+    }
+
+    const location = order.shippingAddress?.location;
+    const additionalInfo = order.shippingAddress?.additionalInfo;
+
+    return [location, additionalInfo].filter(Boolean).join(" • ") || "N/A";
+  };
+
+  const isPendingPaymentOrder = (order: Order) => {
+    return (
+      order.orderStatus === "pending_payment" &&
+      order.payment.status === "pending"
+    );
   };
 
   const filteredOrders = orders.filter((order) => {
     const matchesStatus =
       filterStatus === "all" || order.orderStatus === filterStatus;
+
     const matchesSearch =
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.items.some((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
+
     return matchesStatus && matchesSearch;
   });
 
@@ -216,14 +240,61 @@ const MyOrders = () => {
 
       toast.success("Invoice downloaded successfully");
     } catch (err: any) {
-      console.error("Download failed at:", err); // 👈
       toast.error(err.message || "Failed to download invoice");
     } finally {
       setDownloadingOrderId(null);
     }
   };
 
-  // ── Loading State ──────────────────────────────────────────────
+  const handlePayNow = async (orderId: string) => {
+    if (payingOrderId === orderId) return;
+
+    try {
+      setPayingOrderId(orderId);
+
+      const res = await initializePaystackPayment(orderId);
+
+      const paymentUrl =
+        res?.data?.authorization_url ||
+        res?.data?.paymentUrl ||
+        res?.authorization_url ||
+        res?.data?.data?.authorization_url ||
+        res?.data?.data?.authorizationUrl ||
+        res?.data?.authorizationUrl ||
+        res?.paymentUrl;
+
+      if (!paymentUrl) {
+        throw new Error("Payment link was not returned");
+      }
+
+      window.location.href = paymentUrl;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start payment");
+    } finally {
+      setPayingOrderId(null);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (cancellingOrderId === orderId) return;
+
+    try {
+      setCancellingOrderId(orderId);
+
+      await cancelOrder(orderId);
+      toast.success("Order cancelled successfully");
+      await fetchOrders();
+
+      if (selectedOrder?._id === orderId) {
+        setSelectedOrder(null);
+      }
+    } catch (err: any) {
+      toast.error("Failed to cancel order");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -235,7 +306,6 @@ const MyOrders = () => {
     );
   }
 
-  // ── Error State ────────────────────────────────────────────────
   if (error) {
     return (
       <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -247,7 +317,7 @@ const MyOrders = () => {
           <p className="text-gray-500 mb-6">{error}</p>
           <button
             onClick={fetchOrders}
-            className="px-6 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+            className="px-6 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors cursor-pointer"
           >
             Try Again
           </button>
@@ -259,16 +329,13 @@ const MyOrders = () => {
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">My Orders</h1>
           <p className="text-gray-600">Track and manage your orders</p>
         </div>
 
-        {/* Filters and Search */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -280,33 +347,42 @@ const MyOrders = () => {
               />
             </div>
 
-            {/* Status Filter */}
             <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
               {[
                 "all",
-                "pending",
+                "pending_payment",
                 "confirmed",
                 "processing",
                 "shipped",
+                "ready_for_pickup",
                 "delivered",
+                "picked_up",
                 "cancelled",
+                "payment_failed",
               ].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
                     filterStatus === status
                       ? "bg-black text-white shadow-lg"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === "all"
+                    ? "All"
+                    : status
+                        .split("_")
+                        .map(
+                          (part) =>
+                            part.charAt(0).toUpperCase() + part.slice(1),
+                        )
+                        .join(" ")}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-900">
@@ -334,14 +410,19 @@ const MyOrders = () => {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {orders.filter((o) => o.orderStatus === "delivered").length}
+                {
+                  orders.filter(
+                    (o) =>
+                      o.orderStatus === "delivered" ||
+                      o.orderStatus === "picked_up",
+                  ).length
+                }
               </div>
-              <div className="text-sm text-gray-600">Delivered</div>
+              <div className="text-sm text-gray-600">Completed</div>
             </div>
           </div>
         </div>
 
-        {/* Orders List */}
         <div className="space-y-4">
           {filteredOrders.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
@@ -365,11 +446,10 @@ const MyOrders = () => {
                   className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    {/* Left: Order Info */}
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
                             <h3 className="text-lg font-bold text-gray-900">
                               {order.orderNumber}
                             </h3>
@@ -389,7 +469,6 @@ const MyOrders = () => {
                         </div>
                       </div>
 
-                      {/* Items Preview */}
                       <div className="space-y-2 mb-4">
                         {order.items.slice(0, 2).map((item, index) => (
                           <div
@@ -417,8 +496,7 @@ const MyOrders = () => {
                         )}
                       </div>
 
-                      {/* Payment status pill */}
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold border ${
                             order.payment.status === "paid"
@@ -432,10 +510,15 @@ const MyOrders = () => {
                           {order.payment.status.charAt(0).toUpperCase() +
                             order.payment.status.slice(1)}
                         </span>
+
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold border bg-gray-50 text-gray-700 border-gray-200">
+                          {order.fulfillment?.method === "pickup"
+                            ? "Pickup"
+                            : "Home Delivery"}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Right: Total & Actions */}
                     <div className="lg:text-right space-y-4">
                       <div>
                         <div className="text-sm text-gray-600 mb-1">Total</div>
@@ -455,18 +538,50 @@ const MyOrders = () => {
                           <Eye className="w-4 h-4" />
                           View Details
                         </button>
-                        <button
-                          onClick={() =>
-                            handleDownloadReceipt(order._id, order.orderNumber)
-                          }
-                          disabled={downloadingOrderId === order._id}
-                          className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Download className="w-4 h-4" />
-                          {downloadingOrderId === order._id
-                            ? "Downloading..."
-                            : "Invoice"}
-                        </button>
+
+                        {order.payment.status === "paid" && (
+                          <button
+                            onClick={() =>
+                              handleDownloadReceipt(
+                                order._id,
+                                order.orderNumber,
+                              )
+                            }
+                            disabled={downloadingOrderId === order._id}
+                            className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Download className="w-4 h-4" />
+                            {downloadingOrderId === order._id
+                              ? "Downloading..."
+                              : "Invoice"}
+                          </button>
+                        )}
+
+                        {isPendingPaymentOrder(order) && (
+                          <>
+                            <button
+                              onClick={() => handlePayNow(order._id)}
+                              disabled={payingOrderId === order._id}
+                              className="px-6 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              {payingOrderId === order._id
+                                ? "Redirecting..."
+                                : "Pay Now"}
+                            </button>
+
+                            <button
+                              onClick={() => handleCancelOrder(order._id)}
+                              disabled={cancellingOrderId === order._id}
+                              className="px-6 py-2.5 border-2 border-red-300 text-red-700 rounded-lg font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              {cancellingOrderId === order._id
+                                ? "Cancelling..."
+                                : "Cancel Order"}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -477,11 +592,9 @@ const MyOrders = () => {
         </div>
       </div>
 
-      {/* Order Details Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b px-8 py-6 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
@@ -493,15 +606,13 @@ const MyOrders = () => {
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <XCircle className="w-6 h-6 text-gray-500" />
               </button>
             </div>
 
-            {/* Modal Content */}
             <div className="p-8 space-y-6">
-              {/* Status */}
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Order Status</div>
@@ -516,7 +627,6 @@ const MyOrders = () => {
                 </span>
               </div>
 
-              {/* Items */}
               <div>
                 <h3 className="font-bold text-gray-900 mb-4">Order Items</h3>
                 <div className="space-y-3">
@@ -551,30 +661,32 @@ const MyOrders = () => {
                 </div>
               </div>
 
-              {/* Delivery Info */}
               <div>
                 <h3 className="font-bold text-gray-900 mb-4">
                   Delivery Information
                 </h3>
-                <div className="p-4 bg-gray-50 rounded-xl space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Address:</span>
+                <div className="p-4 bg-gray-50 rounded-xl space-y-3">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Method:
+                    </span>
                     <span className="font-semibold text-gray-900 text-right max-w-xs">
-                      {formatAddress(selectedOrder.shippingAddress)}
+                      {selectedOrder.fulfillment?.method === "pickup"
+                        ? "Pickup at shop"
+                        : "Home Delivery"}
                     </span>
                   </div>
-                  {selectedOrder.shippingAddress.deliveryNotes && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Notes:</span>
-                      <span className="font-semibold text-gray-900 text-right max-w-xs">
-                        {selectedOrder.shippingAddress.deliveryNotes}
-                      </span>
-                    </div>
-                  )}
+
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Address:</span>
+                    <span className="font-semibold text-gray-900 text-right max-w-xs">
+                      {formatAddress(selectedOrder)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Payment Summary */}
               <div>
                 <h3 className="font-bold text-gray-900 mb-4">
                   Payment Summary
@@ -588,8 +700,13 @@ const MyOrders = () => {
                         selectedOrder.total.toLocaleString()}
                     </span>
                   </div>
+
                   <div className="flex justify-between text-gray-600">
-                    <span>Delivery Fee</span>
+                    <span>
+                      {selectedOrder.fulfillment?.method === "pickup"
+                        ? "Pickup Fee"
+                        : "Delivery Fee"}
+                    </span>
                     {selectedOrder.shippingFee === 0 ? (
                       <span className="text-green-600 font-semibold">FREE</span>
                     ) : (
@@ -598,6 +715,7 @@ const MyOrders = () => {
                       </span>
                     )}
                   </div>
+
                   <div className="pt-3 border-t flex justify-between">
                     <span className="font-bold text-gray-900 text-lg">
                       Total
@@ -606,12 +724,14 @@ const MyOrders = () => {
                       KSh {selectedOrder.total.toLocaleString()}
                     </span>
                   </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Payment Method</span>
                     <span className="font-semibold text-gray-900">
                       {formatPaymentMethod(selectedOrder.payment.method)}
                     </span>
                   </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Payment Status</span>
                     <span
@@ -627,6 +747,7 @@ const MyOrders = () => {
                         selectedOrder.payment.status.slice(1)}
                     </span>
                   </div>
+
                   {selectedOrder.payment.mpesaReceiptNumber && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">M-Pesa Receipt</span>
@@ -638,20 +759,44 @@ const MyOrders = () => {
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
                 <button
                   onClick={() => {
                     setSelectedOrder(null);
                     router.push(`/orders/track/${selectedOrder._id}`);
                   }}
-                  className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors cursor-pointer"
+                  className="flex-1 w-full px-6 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors cursor-pointer"
                 >
                   Track Order
                 </button>
+
+                {isPendingPaymentOrder(selectedOrder) && (
+                  <>
+                    <button
+                      onClick={() => handlePayNow(selectedOrder._id)}
+                      disabled={payingOrderId === selectedOrder._id}
+                      className="flex-1 w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {payingOrderId === selectedOrder._id
+                        ? "Redirecting..."
+                        : "Pay Now"}
+                    </button>
+
+                    <button
+                      onClick={() => handleCancelOrder(selectedOrder._id)}
+                      disabled={cancellingOrderId === selectedOrder._id}
+                      className="flex-1 w-full px-6 py-3 border-2 border-red-300 text-red-700 rounded-xl font-semibold hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {cancellingOrderId === selectedOrder._id
+                        ? "Cancelling..."
+                        : "Cancel Order"}
+                    </button>
+                  </>
+                )}
+
                 <button
                   onClick={() => router.push("/contact")}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex-1 w-full px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Contact Support
                 </button>

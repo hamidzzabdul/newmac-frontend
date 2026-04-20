@@ -142,6 +142,21 @@ export async function initializePaystackPayment(orderId: string) {
   return res.json();
 }
 
+export async function cancelOrder(orderId: string) {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/${orderId}/cancel`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function downloadReceipt(orderId: string): Promise<Blob> {
   const token = getAuthToken();
 
