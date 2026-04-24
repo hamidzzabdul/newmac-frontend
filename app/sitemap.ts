@@ -1,42 +1,54 @@
+// app/sitemap.ts
+
 import { MetadataRoute } from "next";
 
-const API =
+const SITE_URL = "https://newmarkprimemeat.com";
+
+const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.newmarkprimemeat.com/api/v1";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  let products = [];
+  let products: any[] = [];
 
   try {
-    const res = await fetch(`${API}/products?limit=1000`, {
+    const res = await fetch(`${API_URL}/products?limit=1000`, {
       cache: "no-store",
     });
 
-    const data = await res.json();
-    products = data.docs || [];
-  } catch (error) {
+    if (res.ok) {
+      const data = await res.json();
+      products = data.docs || [];
+    }
+  } catch {
     products = [];
   }
 
-  const productUrls = products.map((product: any) => ({
-    url: `https://newmarkprimemeat.com/products/${product.slug}`,
+  const staticRoutes: MetadataRoute.Sitemap = [
+    "",
+    "/about",
+    "/contact",
+    "/faqs",
+    "/privacy-policy",
+    "/profile",
+    "/shop",
+    "/terms-of-service",
+  ].map((route) => ({
+    url: `${SITE_URL}${route}`,
     lastModified: new Date(),
-    changeFrequency: "daily" as const,
-    priority: 0.8,
+    changeFrequency: "weekly",
+    priority: route === "" ? 1 : 0.7,
   }));
 
-  return [
-    {
-      url: "https://newmarkprimemeat.com",
-      lastModified: new Date(),
+  const productRoutes: MetadataRoute.Sitemap = products
+    .filter((product) => product.slug)
+    .map((product) => ({
+      url: `${SITE_URL}/shop/${product.slug}`,
+      lastModified: product.updatedAt
+        ? new Date(product.updatedAt)
+        : new Date(),
       changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: "https://newmarkprimemeat.com/shop",
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    ...productUrls,
-  ];
+      priority: 0.8,
+    }));
+
+  return [...staticRoutes, ...productRoutes];
 }
