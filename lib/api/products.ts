@@ -76,8 +76,10 @@ export const getAllProducts = async (params?: {
 
   const url = `${API_BASE_URL}/products${qs.toString() ? `?${qs.toString()}` : ""}`;
 
-  const res = await fetch(url, { headers });
-
+  const res = await fetch(url, {
+    headers,
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error("Failed to fetch products");
 
   return res.json();
@@ -112,8 +114,10 @@ export const getAllProductsHome = async (params?: {
 
   const url = `${API_BASE_URL}/products${qs.toString() ? `?${qs.toString()}` : ""}`;
 
-  const res = await fetch(url, { headers });
-
+  const res = await fetch(url, {
+    headers,
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error("Failed to fetch products");
 
   return res.json();
@@ -132,7 +136,9 @@ export const getProductById = async (id: string): Promise<Product> => {
 };
 
 export const getProductBySlug = async (slug: string): Promise<Product> => {
-  const response = await fetch(`${API_BASE_URL}/products/slug/${slug}`);
+  const response = await fetch(`${API_BASE_URL}/products/slug/${slug}`, {
+    cache: "no-store",
+  });
   if (!response.ok) {
     if (!response.ok) {
       const text = await response.text();
