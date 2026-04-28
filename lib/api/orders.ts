@@ -170,3 +170,34 @@ export async function downloadReceipt(orderId: string): Promise<Blob> {
   if (!res.ok) throw new Error(await res.text());
   return res.blob();
 }
+
+export async function getWorkerOrders() {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/butcher`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+
+  return res.json();
+}
+
+export async function markWorkerOrderReady(orderId: string) {
+  const token = getAuthToken();
+
+  const res = await fetch(`${API_BASE_URL}/orders/${orderId}/butcher-status`, {
+    method: "PATCH",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+
+  return res.json();
+}

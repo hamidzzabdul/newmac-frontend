@@ -262,6 +262,29 @@ function NavActions({ onOpenAuth }: NavActionsProps) {
                     />
                   </Link>
                 )}
+                {(user?.role === "worker" || user?.role === "admin") && (
+                  <Link
+                    href="/butcher/orders"
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-red-50 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                        <ShoppingBag
+                          className="text-gray-500 group-hover:text-red-600 transition-colors"
+                          size={16}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700 group-hover:text-red-600 transition-colors">
+                        Order Desk
+                      </span>
+                    </div>
+                    <ChevronRight
+                      className="text-gray-300 group-hover:text-red-400 transition-colors"
+                      size={15}
+                    />
+                  </Link>
+                )}
               </div>
 
               <div className="border-t border-gray-100 p-2">

@@ -22,6 +22,8 @@ import Link from "next/link";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 
+import LocationPickerMap from "@/components/shop/LocationPickerMap";
+
 interface CheckoutStep {
   number: number;
   title: string;
@@ -48,6 +50,14 @@ const CheckoutPage = () => {
     "home_delivery" | "pickup"
   >("home_delivery");
   const [clicked, setClicked] = useState(false);
+  const [customerCoords, setCustomerCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const [deliveryFee, setDeliveryFee] = useState(150);
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const dispatch = useDispatch();
 
@@ -102,9 +112,109 @@ const CheckoutPage = () => {
     (sum, item) => sum + item.pricePerKg * item.quantityKg,
     0,
   );
-  const deliveryFee = fulfillmentMethod === "home_delivery" ? 150 : 0;
-  const total = subtotal + deliveryFee;
+  const total =
+    subtotal + (fulfillmentMethod === "home_delivery" ? deliveryFee : 0);
 
+  const calculateLocalDeliveryFee = (lat: number, lng: number) => {
+    const SHOP_LAT = -1.2642086;
+    const SHOP_LNG = 36.8053442;
+
+    const R = 6371;
+    const dLat = ((lat - SHOP_LAT) * Math.PI) / 180;
+    const dLng = ((lng - SHOP_LNG) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((SHOP_LAT * Math.PI) / 180) *
+        Math.cos((lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+
+    const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+
+    let fee = 150;
+    if (distance <= 3) fee = 150;
+    else if (distance <= 7) fee = 250;
+    else if (distance <= 12) fee = 350;
+    else if (distance <= 20) fee = 500;
+    else fee = 700;
+
+    setCustomerCoords({ latitude: lat, longitude: lng });
+    setDistanceKm(Math.round(distance * 10) / 10);
+    setDeliveryFee(fee);
+  };
+  const reverseGeocode = async (lat: number, lng: number) => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`,
+    );
+
+    const data = await res.json();
+
+    if (data.status !== "OK") {
+      throw new Error(data.error_message || data.status);
+    }
+
+    return (
+      data?.results?.[0]?.formatted_address ||
+      `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+    );
+  };
+
+  const updateCustomerLocation = async (lat: number, lng: number) => {
+    calculateLocalDeliveryFee(lat, lng);
+
+    try {
+      const address = await reverseGeocode(lat, lng);
+
+      setValue("location", address, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    } catch {
+      setValue("location", `${lat.toFixed(6)}, ${lng.toFixed(6)}`, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Location is not supported on this device");
+      return;
+    }
+
+    setLocationLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          await updateCustomerLocation(
+            position.coords.latitude,
+            position.coords.longitude,
+          );
+
+          toast.success("Location detected. Delivery fee updated.");
+        } catch {
+          toast.error("Could not update your location.");
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      () => {
+        setLocationLoading(false);
+        toast.error(
+          "Could not get your location. Please allow location access.",
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      },
+    );
+  };
   const nextStep = async () => {
     if (currentStep === 1) {
       const values = getValues();
@@ -166,6 +276,14 @@ const CheckoutPage = () => {
           location:
             data.fulfillmentMethod === "home_delivery" ? data.location : "",
           additionalInfo: data.additionalInfo || "",
+          latitude:
+            data.fulfillmentMethod === "home_delivery"
+              ? customerCoords?.latitude
+              : undefined,
+          longitude:
+            data.fulfillmentMethod === "home_delivery"
+              ? customerCoords?.longitude
+              : undefined,
         },
         paymentMethod: effectivePaymentMethod,
       };
@@ -206,6 +324,16 @@ const CheckoutPage = () => {
   if (!ready) {
     return null;
   }
+
+  const handleChooseOnMap = async () => {
+    // Default map position: your shop / nearby Nairobi
+    const defaultLat = customerCoords?.latitude || -1.2642086;
+    const defaultLng = customerCoords?.longitude || 36.8053442;
+
+    await updateCustomerLocation(defaultLat, defaultLng);
+
+    toast.success("Move the pin to the delivery location.");
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f7f5]">
@@ -413,18 +541,43 @@ const CheckoutPage = () => {
                         </p>
                       )}
                     </div>
-
                     {fulfillmentUI === "home_delivery" && (
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
-                          Location *
+                          Delivery location *
                         </label>
+
                         <input
                           type="text"
                           {...register("location")}
                           className={inputCls(!!errors.location)}
-                          placeholder="Eastleigh, Nairobi / estate / landmark"
+                          placeholder="Example: Ngara Civil Servants, Block A, Nairobi"
                         />
+
+                        <button
+                          type="button"
+                          onClick={handleUseCurrentLocation}
+                          disabled={locationLoading}
+                          className="mt-2 px-4 py-2 rounded-lg bg-black text-white text-xs font-semibold cursor-pointer disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          {locationLoading
+                            ? "Detecting location..."
+                            : "Use my current location"}
+                        </button>
+                        {customerCoords && (
+                          <LocationPickerMap
+                            lat={customerCoords.latitude}
+                            lng={customerCoords.longitude}
+                            onChange={updateCustomerLocation}
+                          />
+                        )}
+                        {distanceKm !== null && (
+                          <p className="text-xs text-green-600 mt-2">
+                            Distance from shop: {distanceKm} km · Delivery fee:
+                            KSh {deliveryFee.toLocaleString()}
+                          </p>
+                        )}
+
                         {errors.location && (
                           <p className="text-red-500 text-xs mt-1.5">
                             {errors.location.message}
@@ -881,7 +1034,9 @@ const CheckoutPage = () => {
                           : "text-amber-600"
                       }`}
                     >
-                      {fulfillmentMethod === "pickup" ? "Free" : "KSh 150"}
+                      {fulfillmentMethod === "pickup"
+                        ? "Free"
+                        : `KSh ${deliveryFee.toLocaleString()}`}{" "}
                     </span>
                   </div>
                 </div>

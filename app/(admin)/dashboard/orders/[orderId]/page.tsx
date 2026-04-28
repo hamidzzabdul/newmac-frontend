@@ -20,20 +20,29 @@ type Order = {
   shippingFee: number;
   total: number;
   notes?: string;
+
   customer: {
-    firstName: string;
+    fullName?: string;
+    firstName?: string;
     lastName?: string;
-    email: string;
+    email?: string;
     phone: string;
   };
-  items: OrderItem[];
-  shippingAddress: {
-    street: string;
-    city: string;
-    postalCode?: string;
-    country: string;
-    deliveryNotes?: string;
+
+  fulfillment?: {
+    method: "home_delivery" | "pickup";
   };
+
+  items: OrderItem[];
+
+  shippingAddress?: {
+    location?: string;
+    additionalInfo?: string;
+    latitude?: number;
+    longitude?: number;
+    distanceKm?: number;
+  };
+
   payment: {
     method: "mpesa" | "card" | "cod";
     status: "pending" | "paid" | "failed" | "refunded";
@@ -51,17 +60,29 @@ type Order = {
 };
 
 const ORDER_STATUS_STYLES: Record<string, { badge: string; label: string }> = {
-  pending: { badge: "bg-yellow-100 text-yellow-700", label: "Pending" },
+  pending_payment: {
+    badge: "bg-yellow-100 text-yellow-700",
+    label: "Pending Payment",
+  },
   confirmed: { badge: "bg-green-100 text-green-700", label: "Confirmed" },
   processing: { badge: "bg-blue-100 text-blue-700", label: "Processing" },
   shipped: { badge: "bg-purple-100 text-purple-700", label: "Shipped" },
+  ready_for_pickup: {
+    badge: "bg-indigo-100 text-indigo-700",
+    label: "Ready for Pickup",
+  },
   delivered: { badge: "bg-green-100 text-green-700", label: "Delivered" },
+  picked_up: { badge: "bg-green-100 text-green-700", label: "Picked Up" },
   cancelled: { badge: "bg-red-100 text-red-700", label: "Cancelled" },
+  payment_failed: {
+    badge: "bg-red-100 text-red-700",
+    label: "Payment Failed",
+  },
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   mpesa: "M-Pesa",
-  card: "Card",
+  card: "M-Pesa / Card",
   cod: "Cash on Delivery",
 };
 
@@ -86,19 +107,29 @@ function Section({
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between items-start py-2 border-b border-gray-50 last:border-0">
+    <div className="flex justify-between items-start gap-4 py-2 border-b border-gray-50 last:border-0">
       <span className="text-sm text-gray-500 w-36 shrink-0">{label}</span>
-      <span className="text-sm text-gray-900 text-right">{value}</span>
+      <span className="text-sm text-gray-900 text-right break-words">
+        {value || "—"}
+      </span>
     </div>
   );
 }
 
-function PaymentBadge({ method, status }: { method: string; status: string }) {
-  const isCod = method === "cod";
-  const isPaid = status === "paid";
-  const isFailed = status === "failed";
+function formatDate(iso?: string) {
+  if (!iso) return "—";
 
-  if (isCod) {
+  return new Date(iso).toLocaleDateString("en-KE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function PaymentBadge({ method, status }: { method: string; status: string }) {
+  if (method === "cod") {
     return (
       <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
         <span className="text-amber-600 text-lg">💵</span>
@@ -107,17 +138,17 @@ function PaymentBadge({ method, status }: { method: string; status: string }) {
             Cash on Delivery
           </p>
           <p className="text-xs text-amber-600">
-            Payment collected at delivery
+            Customer will pay when order is delivered
           </p>
         </div>
         <span className="ml-auto px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
-          Pay on Delivery
+          COD
         </span>
       </div>
     );
   }
 
-  if (isPaid) {
+  if (status === "paid") {
     return (
       <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
         <span className="text-green-600 text-lg">✅</span>
@@ -134,7 +165,7 @@ function PaymentBadge({ method, status }: { method: string; status: string }) {
     );
   }
 
-  if (isFailed) {
+  if (status === "failed") {
     return (
       <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
         <span className="text-red-600 text-lg">❌</span>
@@ -153,7 +184,6 @@ function PaymentBadge({ method, status }: { method: string; status: string }) {
     );
   }
 
-  // Pending
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
       <span className="text-yellow-600 text-lg">⏳</span>
@@ -170,19 +200,10 @@ function PaymentBadge({ method, status }: { method: string; status: string }) {
   );
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-KE", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const router = useRouter();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -221,14 +242,55 @@ export default function OrderDetailPage() {
     label: order.orderStatus,
   };
 
-  const itemsTotal = order.items.reduce(
-    (sum, i) => sum + i.price * i.quantity,
-    0,
-  );
+  const customerName =
+    order.customer.fullName ||
+    `${order.customer.firstName ?? ""} ${order.customer.lastName ?? ""}`.trim();
 
+  const isPickup = order.fulfillment?.method === "pickup";
+
+  const lat = order.shippingAddress?.latitude;
+  const lng = order.shippingAddress?.longitude;
+
+  const hasCoordinates = typeof lat === "number" && typeof lng === "number";
+
+  const googleMapsUrl = hasCoordinates
+    ? `https://www.google.com/maps?q=${lat},${lng}`
+    : "";
+  const buildWhatsAppLink = () => {
+    const name =
+      order.customer.fullName ||
+      `${order.customer.firstName ?? ""} ${order.customer.lastName ?? ""}`.trim();
+
+    const phone = order.customer.phone;
+
+    const location = order.shippingAddress?.location || "Not provided";
+    const notes = order.shippingAddress?.additionalInfo || "";
+    const lat = order.shippingAddress?.latitude;
+    const lng = order.shippingAddress?.longitude;
+
+    const mapsLink =
+      lat && lng
+        ? `https://www.google.com/maps?q=${lat},${lng}`
+        : "No map link available";
+
+    const message = `
+*NEW DELIVERY ORDER*
+
+Order: #${order.orderNumber}
+ Customer: ${name}
+ Phone: ${phone}
+
+ Location: ${location}
+${notes ? ` Notes: ${notes}` : ""}
+
+🗺️ Map:
+${mapsLink}
+  `;
+
+    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  };
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
+    <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
@@ -236,61 +298,127 @@ export default function OrderDetailPage() {
         >
           ←
         </button>
+
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">
               #{order.orderNumber}
             </h1>
+
             <span
               className={`px-3 py-1 text-xs font-medium rounded-full capitalize ${statusStyle.badge}`}
             >
               {statusStyle.label}
             </span>
           </div>
+
           <p className="text-sm text-gray-500 mt-1">
             Placed on {formatDate(order.createdAt)}
           </p>
         </div>
       </div>
 
-      {/* Payment Status Banner */}
       <PaymentBadge
         method={order.payment.method}
         status={order.payment.status}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Customer Info */}
         <Section title="Customer">
-          <InfoRow
-            label="Name"
-            value={`${order.customer.firstName} ${order.customer.lastName ?? ""}`.trim()}
-          />
-          <InfoRow label="Email" value={order.customer.email} />
+          <InfoRow label="Name" value={customerName} />
           <InfoRow label="Phone" value={order.customer.phone} />
+          <InfoRow
+            label="Email"
+            value={order.customer.email || "Not provided"}
+          />
         </Section>
 
-        {/* Shipping Address */}
-        <Section title="Shipping Address">
-          <InfoRow label="Street" value={order.shippingAddress.street} />
-          <InfoRow label="City" value={order.shippingAddress.city} />
-          {order.shippingAddress.postalCode && (
-            <InfoRow
-              label="Postal Code"
-              value={order.shippingAddress.postalCode}
-            />
-          )}
-          <InfoRow label="Country" value={order.shippingAddress.country} />
-          {order.shippingAddress.deliveryNotes && (
-            <InfoRow
-              label="Notes"
-              value={order.shippingAddress.deliveryNotes}
-            />
-          )}
+        <Section title="Fulfillment">
+          <InfoRow
+            label="Method"
+            value={isPickup ? "Pick up at Shop" : "Home Delivery"}
+          />
+          <InfoRow
+            label="Delivery Fee"
+            value={`KSh ${order.shippingFee.toLocaleString()}`}
+          />
+          <InfoRow
+            label="Total"
+            value={`KSh ${order.total.toLocaleString()}`}
+          />
         </Section>
       </div>
 
-      {/* Payment Details */}
+      {!isPickup && (
+        <Section title="Shipping Information">
+          <div className="space-y-1">
+            <InfoRow
+              label="Location"
+              value={order.shippingAddress?.location || "Not provided"}
+            />
+
+            <InfoRow
+              label="Additional Info"
+              value={order.shippingAddress?.additionalInfo || "None"}
+            />
+
+            <InfoRow
+              label="Distance"
+              value={
+                order.shippingAddress?.distanceKm !== undefined &&
+                order.shippingAddress?.distanceKm !== null
+                  ? `${order.shippingAddress.distanceKm} km from shop`
+                  : "Not calculated"
+              }
+            />
+
+            <InfoRow
+              label="Coordinates"
+              value={
+                hasCoordinates
+                  ? `${lat!.toFixed(6)}, ${lng!.toFixed(6)}`
+                  : "Not available"
+              }
+            />
+
+            {hasCoordinates && (
+              <div className="pt-4">
+                <div className="w-full flex items-center justify-between">
+                  <a
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-900 cursor-pointer"
+                  >
+                    Open Location in Google Maps
+                  </a>
+                  <a
+                    href={buildWhatsAppLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 cursor-pointer"
+                  >
+                    Send to Rider (WhatsApp)
+                  </a>
+                </div>
+
+                <div className="mt-4 rounded-xl overflow-hidden border border-gray-200">
+                  <iframe
+                    title="Delivery location map"
+                    width="100%"
+                    height="260"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps?q=${lat},${lng}&z=16&output=embed`}
+                    className="border-0"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+
       <Section title="Payment Details">
         <InfoRow
           label="Method"
@@ -298,6 +426,7 @@ export default function OrderDetailPage() {
             PAYMENT_METHOD_LABELS[order.payment.method] ?? order.payment.method
           }
         />
+
         <InfoRow
           label="Status"
           value={
@@ -316,40 +445,38 @@ export default function OrderDetailPage() {
             </span>
           }
         />
-        {/* M-Pesa specific */}
-        {order.payment.method === "mpesa" && (
-          <>
-            {order.payment.phone && (
-              <InfoRow label="M-Pesa Phone" value={order.payment.phone} />
-            )}
-            {order.payment.mpesaReceiptNumber && (
-              <InfoRow
-                label="Receipt No."
-                value={order.payment.mpesaReceiptNumber}
-              />
-            )}
-            {order.payment.transactionDate && (
-              <InfoRow
-                label="Transaction Date"
-                value={order.payment.transactionDate}
-              />
-            )}
-          </>
+
+        {order.payment.phone && (
+          <InfoRow label="Payment Phone" value={order.payment.phone} />
         )}
-        {/* Card specific */}
-        {order.payment.method === "card" && order.payment.card && (
-          <>
-            {order.payment.card.brand && order.payment.card.last4 && (
-              <InfoRow
-                label="Card"
-                value={`${order.payment.card.brand.toUpperCase()} •••• ${order.payment.card.last4}`}
-              />
-            )}
-          </>
+
+        {order.payment.mpesaReceiptNumber && (
+          <InfoRow
+            label="Receipt No."
+            value={order.payment.mpesaReceiptNumber}
+          />
         )}
+
+        {order.payment.transactionDate && (
+          <InfoRow
+            label="Transaction Date"
+            value={order.payment.transactionDate}
+          />
+        )}
+
+        {order.payment.card?.brand && order.payment.card?.last4 && (
+          <InfoRow
+            label="Card"
+            value={`${order.payment.card.brand.toUpperCase()} •••• ${
+              order.payment.card.last4
+            }`}
+          />
+        )}
+
         {order.payment.paidAt && (
           <InfoRow label="Paid At" value={formatDate(order.payment.paidAt)} />
         )}
+
         {order.payment.failureReason && (
           <InfoRow
             label="Failure Reason"
@@ -362,7 +489,6 @@ export default function OrderDetailPage() {
         )}
       </Section>
 
-      {/* Order Items */}
       <Section title={`Order Items (${order.items.length})`}>
         <div className="space-y-3">
           {order.items.map((item, i) => (
@@ -376,6 +502,7 @@ export default function OrderDetailPage() {
                   {item.quantity} kg × KSh {item.price.toLocaleString()}
                 </p>
               </div>
+
               <p className="text-sm font-semibold text-gray-900">
                 KSh {(item.price * item.quantity).toLocaleString()}
               </p>
@@ -383,16 +510,19 @@ export default function OrderDetailPage() {
           ))}
         </div>
 
-        {/* Totals */}
         <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
           <div className="flex justify-between text-sm text-gray-600">
             <span>Subtotal</span>
             <span>KSh {order.subtotal.toLocaleString()}</span>
           </div>
+
           <div className="flex justify-between text-sm text-gray-600">
-            <span>Shipping</span>
-            <span>KSh {order.shippingFee.toLocaleString()}</span>
+            <span>{isPickup ? "Pickup" : "Shipping"}</span>
+            <span>
+              {isPickup ? "Free" : `KSh ${order.shippingFee.toLocaleString()}`}
+            </span>
           </div>
+
           <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
             <span>Total</span>
             <span>KSh {order.total.toLocaleString()}</span>
@@ -400,14 +530,12 @@ export default function OrderDetailPage() {
         </div>
       </Section>
 
-      {/* Notes */}
       {order.notes && (
         <Section title="Order Notes">
           <p className="text-sm text-gray-600">{order.notes}</p>
         </Section>
       )}
 
-      {/* Timestamps */}
       <div className="flex gap-6 text-xs text-gray-400 pb-4">
         <span>Created: {formatDate(order.createdAt)}</span>
         <span>Updated: {formatDate(order.updatedAt)}</span>
