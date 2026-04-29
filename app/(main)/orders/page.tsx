@@ -253,14 +253,15 @@ const MyOrders = () => {
       setPayingOrderId(orderId);
 
       const res = await initializePaystackPayment(orderId);
-
+      console.log("PAYSTACK INIT RESPONSE:", res);
       const paymentUrl =
+        res?.data?.authorizationUrl ||
         res?.data?.authorization_url ||
         res?.data?.paymentUrl ||
-        res?.authorization_url ||
         res?.data?.data?.authorization_url ||
         res?.data?.data?.authorizationUrl ||
-        res?.data?.authorizationUrl ||
+        res?.authorizationUrl ||
+        res?.authorization_url ||
         res?.paymentUrl;
 
       if (!paymentUrl) {
