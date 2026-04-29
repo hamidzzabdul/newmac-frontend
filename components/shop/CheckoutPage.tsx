@@ -275,15 +275,27 @@ const CheckoutPage = () => {
         shippingAddress: {
           location:
             data.fulfillmentMethod === "home_delivery" ? data.location : "",
+
           additionalInfo: data.additionalInfo || "",
+
           latitude:
-            data.fulfillmentMethod === "home_delivery"
-              ? customerCoords?.latitude
+            data.fulfillmentMethod === "home_delivery" &&
+            customerCoords?.latitude !== undefined
+              ? customerCoords.latitude
               : undefined,
+
           longitude:
-            data.fulfillmentMethod === "home_delivery"
-              ? customerCoords?.longitude
+            data.fulfillmentMethod === "home_delivery" &&
+            customerCoords?.longitude !== undefined
+              ? customerCoords.longitude
               : undefined,
+
+          distanceKm:
+            data.fulfillmentMethod === "home_delivery" &&
+            typeof distanceKm === "number" &&
+            Number.isFinite(distanceKm)
+              ? distanceKm
+              : 0,
         },
         paymentMethod: effectivePaymentMethod,
       };
