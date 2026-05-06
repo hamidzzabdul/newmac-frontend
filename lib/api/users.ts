@@ -40,7 +40,7 @@ export async function getAllUsers(params?: {
 
 export async function updateUserRole(
   userId: string,
-  role: "user" | "worker" | "admin",
+  role: "user" | "worker" | "cashier" | "admin",
 ) {
   const res = await fetch(`${API_BASE_URL}/users/${userId}/role`, {
     method: "PATCH",
