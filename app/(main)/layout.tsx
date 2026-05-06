@@ -6,6 +6,8 @@ import CartProvider from "@/services/CartProvider";
 import { AuthProvider } from "@/hooks/UseAuth";
 import { Providers } from "@/services/QueryProvider";
 import { Toaster } from "react-hot-toast";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
+import Script from "next/script";
 import "@/app/globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -51,6 +53,7 @@ export default function RootLayout({
               <main className="flex-1">{children}</main>
 
               <Toaster />
+              <WhatsAppWidget />
               <Footer />
             </CartProvider>
           </Providers>

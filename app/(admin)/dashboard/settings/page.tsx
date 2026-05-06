@@ -23,11 +23,12 @@ const TABS = [
 const ROLES = [
   { value: "user", label: "Customer" },
   { value: "worker", label: "Worker" },
+  { value: "cashier", label: "Cashier" },
   { value: "admin", label: "Admin" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
-type Role = "user" | "worker" | "admin";
+type Role = "user" | "worker" | "cashier" | "admin";
 
 interface UserRow {
   _id: string;
@@ -55,6 +56,8 @@ function getRoleBadge(role: Role) {
       return "bg-purple-100 text-purple-700 border-purple-200";
     case "worker":
       return "bg-blue-100 text-blue-700 border-blue-200";
+    case "cashier":
+      return "bg-green-100 text-green-700 border-green-200";
     default:
       return "bg-gray-100 text-gray-700 border-gray-200";
   }

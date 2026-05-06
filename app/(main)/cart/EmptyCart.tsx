@@ -27,7 +27,7 @@ const EmptyCart = () => {
             Discover our premium selection of fresh meat products!
           </p>
           <Link href={"/shop"}>
-            <button className="bg-red-600 text-white px-8 py-4 rounded-lg hover:bg-red-700 transition font-bold text-lg shadow-md hover:shadow-lg">
+            <button className="bg-red-600 text-white px-8 py-4 rounded-lg hover:bg-red-700 transition font-bold text-lg shadow-md hover:shadow-lg cursor-pointer">
               Start Shopping
             </button>
           </Link>

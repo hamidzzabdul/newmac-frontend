@@ -49,7 +49,7 @@ export default function WorkerLayoutInner({
 
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/butcher/orders" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center">
               <PackageCheck className="w-5 h-5" />
             </div>
