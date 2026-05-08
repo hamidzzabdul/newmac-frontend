@@ -2,7 +2,7 @@ import { Mail, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaFacebookSquare, FaInstagramSquare } from "react-icons/fa";
-import { FaPhone, FaTiktok } from "react-icons/fa6";
+import { FaPhone, FaTiktok, FaYoutube } from "react-icons/fa6";
 import Logo from "@/public/logo.jpeg";
 
 function Footer() {
@@ -175,7 +175,7 @@ function Footer() {
                   />
                 </Link>
                 <Link
-                  href="/"
+                  href="https://web.facebook.com/people/Newmark-Prime/pfbid0sp9HedX6gg5pu3TocinPPvqrTwxisGYxKSWPfHFHDRb82LE8TwSdmtGCQtR2hELTl/"
                   className="p-2 bg-gray-800 rounded-md hover:bg-red-600 transition-all duration-300 group"
                 >
                   <FaFacebookSquare
@@ -184,10 +184,19 @@ function Footer() {
                   />
                 </Link>
                 <Link
-                  href="/"
+                  href="https://www.instagram.com/newmarkprimecuts"
                   className="p-2 bg-gray-800 rounded-md hover:bg-red-600 transition-all duration-300 group"
                 >
                   <FaInstagramSquare
+                    size={20}
+                    className="text-gray-400 group-hover:text-white transition-colors"
+                  />
+                </Link>
+                <Link
+                  href="https://www.youtube.com/channel/UChXlKaeDwkKThbTen-A9r0g"
+                  className="p-2 bg-gray-800 rounded-md hover:bg-red-600 transition-all duration-300 group"
+                >
+                  <FaYoutube
                     size={20}
                     className="text-gray-400 group-hover:text-white transition-colors"
                   />

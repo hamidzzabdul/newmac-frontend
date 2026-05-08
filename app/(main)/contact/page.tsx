@@ -351,7 +351,7 @@ function ContactPage() {
                   <span className="font-medium text-sm">WhatsApp</span>
                 </a>
                 <a
-                  href="https://facebook.com"
+                  href="https://web.facebook.com/people/Newmark-Prime/pfbid0sp9HedX6gg5pu3TocinPPvqrTwxisGYxKSWPfHFHDRb82LE8TwSdmtGCQtR2hELTl/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-4 bg-white/20 hover:bg-white/30 rounded-2xl transition-all cursor-pointer backdrop-blur-sm"
@@ -360,7 +360,7 @@ function ContactPage() {
                   <span className="font-medium text-sm">Facebook</span>
                 </a>
                 <a
-                  href="https://instagram.com"
+                  href="https://www.instagram.com/newmarkprimecuts"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-4 bg-white/20 hover:bg-white/30 rounded-2xl transition-all cursor-pointer backdrop-blur-sm"
